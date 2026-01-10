@@ -1,0 +1,617 @@
+:root {
+    --bg-dark: #0f111a;
+    --panel-bg: #1a1d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #8b9bb4;
+    --accent: #3b82f6;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+#map {
+    flex-grow: 1;
+    height: 100%;
+    background-color: #0b0d14; /* Deep dark ocean color */
+    z-index: 1;
+}
+
+#map-overlay {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000; /* Above map */
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    pointer-events: none; /* Let clicks pass through if needed */
+}
+
+.overlay-brand {
+    background-color: #0f111a;
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    letter-spacing: 1px;
+}
+
+.overlay-info {
+    background-color: rgba(15, 17, 26, 0.85);
+    backdrop-filter: blur(4px);
+    color: #f59e0b; /* Orange/Yellow */
+    font-size: 24px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-left: 2px solid #2d3748;
+}
+
+.overlay-divider {
+    width: 2px;
+    height: 20px;
+    background-color: #2d3748;
+}
+
+/* Custom Map Tiles styling via CSS filter if needed, 
+   but we will use a dark tile provider */
+/* .leaflet-tile { } */
+
+#controls {
+    width: 320px;
+    background-color: var(--panel-bg);
+    border-left: 1px solid #2d3748;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.3);
+    z-index: 2;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--panel-bg);
+    padding: 30px;
+    border-radius: 12px;
+    width: 400px;
+    border: 1px solid #2d3748;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+.modal-content ul {
+    padding-left: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.status-badge {
+    background-color: #2d3748;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--accent);
+}
+
+.tool-section {
+    margin-bottom: 24px;
+}
+
+.tool-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.tool-btn {
+    flex: 1;
+    background-color: #2d3748;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tool-btn:hover {
+    background-color: #374151;
+    color: var(--text-primary);
+}
+
+.tool-btn.active {
+    background-color: rgba(59, 130, 246, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+#threat-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 200px;
+}
+
+.region-header {
+    background-color: #1a1f2e;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #8b9bb4;
+    border-left: 3px solid #3b82f6;
+}
+
+.region-header:first-child {
+    margin-top: 0;
+}
+
+.region-name {
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.region-count {
+    font-size: 11px;
+    color: #f59e0b;
+}
+
+.threat-item {
+    background-color: #252a40;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    margin-left: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid var(--warning);
+}
+
+.threat-item.missile {
+    border-left-color: #ef4444;
+}
+
+.threat-item.ballistic {
+    border-left-color: #8b5cf6;
+}
+
+.threat-item.hypersonic {
+    border-left-color: #06b6d4;
+}
+
+.threat-item.nuclear {
+    border-left-color: #facc15;
+}
+
+.threat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.threat-type {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.threat-coords {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.delete-btn:hover {
+    color: var(--danger);
+}
+
+.action-section {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: filter 0.2s;
+}
+
+.action-btn:hover {
+    filter: brightness(110%);
+}
+
+.action-btn.primary {
+    background-color: var(--accent);
+    color: white;
+}
+
+.action-btn.danger {
+    background-color: #2d3748;
+    color: var(--danger);
+}
+
+/* Custom Marker Styles */
+.drone-icon {
+    filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.6));
+    transition: transform 0.3s;
+}
+
+.missile-icon {
+    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.6));
+}
+
+.count-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: white;
+    color: black;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+/* Selected Marker Animation */
+.selected-marker .drone-icon,
+.selected-marker .missile-icon {
+    filter: drop-shadow(0 0 15px white) !important;
+    transform: scale(1.2);
+}
+
+.region-header {
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #2d3748;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    background-color: rgba(45, 55, 72, 0.3); /* Slight background */
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.region-header:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    cursor: pointer;
+}
+
+.region-header.selected {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-left-color: #ef4444;
+}
+
+.region-header:first-child {
+    margin-top: 0;
+}
+
+#selected-region-display {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+    border: 2px solid #ef4444;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #fff;
+}
+
+/* Type header (collapsible) */
+.type-header {
+    background-color: #1e2433;
+    padding: 8px 12px;
+    margin-left: 12px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    border-left: 3px solid #f59e0b;
+}
+
+.type-header.missile { border-left-color: #ef4444; }
+.type-header.ballistic { border-left-color: #8b5cf6; }
+.type-header.hypersonic { border-left-color: #06b6d4; }
+.type-header.nuclear { border-left-color: #facc15; }
+
+.type-header:hover {
+    background-color: #252a3a;
+}
+
+.type-toggle {
+    transition: transform 0.2s;
+    color: #8b9bb4;
+    font-size: 10px;
+}
+
+.type-header.expanded .type-toggle {
+    transform: rotate(90deg);
+}
+
+.type-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.type-count {
+    background: rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #8b9bb4;
+}
+
+/* Type threats container */
+.type-threats {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 8px 0;
+    overflow: hidden;
+    max-height: 500px;
+    transition: max-height 0.3s ease;
+}
+
+.type-threats.collapsed {
+    max-height: 0;
+    margin-bottom: 0;
+}
+
+.type-threats .threat-item {
+    margin-left: 24px;
+}
+
+.leaflet-container {
+    background: #0b0d14 !important;
+}
+.leaflet-control-attribution {
+    background: rgba(0,0,0,0.5) !important;
+    color: #888 !important;
+}
+.leaflet-control-attribution a {
+    color: #aaa !important;
+}
+
+/* Marker Cluster Styles */
+.marker-cluster-custom {
+    background: transparent !important;
+}
+
+.cluster-icon {
+    background: linear-gradient(135deg, #ef4444, #f59e0b);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+    background: transparent !important;
+}
+
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+    background: linear-gradient(135deg, #ef4444, #f59e0b) !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* ==========================================
+   AUTO Mode Styles
+   ========================================== */
+
+.beta-badge {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: white;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.auto-btn {
+    background: linear-gradient(135deg, #2d3748, #1a202c);
+    color: #8b9bb4;
+    border: 1px solid #4a5568;
+    transition: all 0.3s ease;
+}
+
+.auto-btn:hover {
+    background: linear-gradient(135deg, #374151, #2d3748);
+    border-color: #6366f1;
+}
+
+.auto-btn.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+.auto-btn.active:hover {
+    background: linear-gradient(135deg, #7c3aed, #6366f1);
+}
+
+.auto-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #a5b4fc;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* AUTO notification toast */
+.auto-notification {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid #334155;
+    z-index: 3000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.auto-notification.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Auto-generated threat marker indicator */
+.threat-item.auto-generated {
+    border-left-color: #8b5cf6;
+    position: relative;
+}
+
+.threat-item.auto-generated::after {
+    content: 'AUTO';
+    position: absolute;
+    top: 4px;
+    right: 40px;
+    font-size: 8px;
+    background: #8b5cf6;
+    color: white;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+}

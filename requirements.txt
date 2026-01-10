@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+playwright
+pydantic
+httpx
+python-dotenv
+telethon
+aiohttp
+beautifulsoup4
+websockets

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Monitor Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <div id="map"></div>
+        
+        <!-- Overlay for View Mode / Screenshot -->
+        <div id="map-overlay">
+            <div class="overlay-brand">monitor</div>
+            <div class="overlay-info">
+                <span id="overlay-date">09.01.2026 01:30</span>
+                <span class="overlay-divider"></span>
+                <span id="overlay-count">0 x БПЛА</span>
+            </div>
+        </div>
+        
+        <!-- Help Button -->
+        <button id="help-btn" onclick="openHelp()" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: #2d3748; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 40px; height: 40px;">
+            <i class="fa-solid fa-question"></i>
+        </button>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeHelp()" style="float: right; cursor: pointer; font-size: 24px;">&times;</span>
+                <h2>Інструкція</h2>
+                <ul style="line-height: 1.6;">
+                    <li><strong>ЛКМ (Клік):</strong> Додати загрозу (БПЛА/Ракета).</li>
+                    <li><strong>ПКМ (Правий клік):</strong> Повернути напрямок на 45°.</li>
+                    <li><strong>Перетягування:</strong> Змінити позицію маркера.</li>
+                    <li><strong>Клік по області:</strong> Увімкнути/Вимкнути червону зону тривоги.</li>
+                    <li><strong>Кількість:</strong> Вкажіть кількість об'єктів у групі перед додаванням.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="controls">
+            <div class="header">
+                <h2>Панель керування</h2>
+                <div style="display: flex; gap: 8px;">
+                    <div class="status-badge" style="background-color: #ef4444; color: white;" id="total-count">0 БПЛА</div>
+                    <div class="status-badge" id="clock">00:00</div>
+                </div>
+            </div>
+            
+            <!-- Selected region display -->
+            <div id="selected-region-display" style="display: none;"></div>
+            
+            <div class="tool-section">
+                <h3>Додати об'єкт</h3>
+                <div class="button-group" style="flex-wrap: wrap;">
+                    <button class="tool-btn active" data-type="drone" onclick="setTool('drone')">
+                        <i class="fa-solid fa-plane"></i> БПЛА
+                    </button>
+                    <button class="tool-btn" data-type="missile" onclick="setTool('missile')">
+                        <i class="fa-solid fa-rocket"></i> КР
+                    </button>
+                    <button class="tool-btn" data-type="ballistic" onclick="setTool('ballistic')">
+                        <i class="fa-solid fa-bomb"></i> Балістика
+                    </button>
+                    <button class="tool-btn" data-type="hypersonic" onclick="setTool('hypersonic')">
+                        <i class="fa-solid fa-bolt"></i> Гіперзвук
+                    </button>
+                    <button class="tool-btn" data-type="nuclear" onclick="setTool('nuclear')">
+                        <i class="fa-solid fa-radiation"></i> Ядерна
+                    </button>
+                </div>
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px;">
+                    <label style="font-size: 12px; color: #8b9bb4;">Кількість:</label>
+                    <input type="number" id="group-size" value="1" min="1" max="100" 
+                           style="background: #2d3748; border: none; color: white; padding: 4px 8px; border-radius: 4px; width: 60px;">
+                </div>
+            </div>
+
+            <div class="tool-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <h3>Активні загрози</h3>
+                <ul id="threat-list" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Dynamic list items will go here -->
+                </ul>
+            </div>
+            
+            <div class="tool-section">
+                <h3>AUTO Режим <span class="beta-badge">BETA</span></h3>
+                <button id="auto-mode-btn" class="action-btn auto-btn" onclick="toggleAutoMode()">
+                    <i class="fa-solid fa-robot"></i> AUTO: OFF
+                </button>
+                <div id="auto-mode-indicator" class="auto-indicator" style="display: none;">
+                    <span class="pulse-dot"></span>
+                    <span>Моніторинг активний</span>
+                </div>
+            </div>
+            
+            <div class="action-section">
+                <button class="action-btn primary" onclick="exportMap()">
+                    <i class="fa-solid fa-camera"></i> Зробити скріншот
+                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="action-btn danger" onclick="clearThreats()" style="flex: 1; font-size: 13px;">
+                        <i class="fa-solid fa-eraser"></i> Тільки цілі
+                    </button>
+                    <button class="action-btn danger" onclick="clearAll()" style="flex: 1; font-size: 13px;">
+                        <i class="fa-solid fa-trash"></i> Все
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+    <!-- Leaflet Rotated Marker Plugin -->
+    <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+    <!-- Leaflet MarkerCluster Plugin -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <!-- TopoJSON Client -->
+    <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+    <script src="script.js?v=9"></script>
+</body>
+</html>
