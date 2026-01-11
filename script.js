@@ -267,15 +267,10 @@ function onMapRightClick(e) {
     threat.angle = angle;
     threat.trajectoryLength = Math.max(0, distanceKm);
     
-    // Update marker icon (rotation)
-    const iconHtml = createMarkerHtml(threat);
-    const icon = L.divIcon({
-        html: iconHtml,
-        className: 'custom-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-    });
-    selectedMarker.setIcon(icon);
+    // Update marker rotation angle (Leaflet rotatedMarker plugin)
+    if (selectedMarker.setRotationAngle) {
+        selectedMarker.setRotationAngle(angle);
+    }
     
     // Update trajectory line
     updateTrajectoryLine(selectedMarker, threat);

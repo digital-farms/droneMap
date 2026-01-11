@@ -185,6 +185,7 @@ class AutoController:
             self.telegram_monitor = TelegramMonitor(
                 self.config.api_id,
                 self.config.api_hash,
+                bot_token=self.config.bot_token if self.config.bot_token else None,
                 on_message=self._on_telegram_message,
                 on_reply=self._on_telegram_reply
             )

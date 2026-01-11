@@ -8,6 +8,10 @@ class AutoModeConfig:
     api_id: int = field(default_factory=lambda: int(os.getenv("TELEGRAM_API_ID", "0")))
     api_hash: str = field(default_factory=lambda: os.getenv("TELEGRAM_API_HASH", ""))
     
+    # Telegram Bot Token (optional - use instead of user auth)
+    # Get from @BotFather, then add bot as admin to your channel
+    bot_token: str = field(default_factory=lambda: os.getenv("TELEGRAM_BOT_TOKEN", ""))
+    
     # OpenRouter API
     openrouter_api_key: str = field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
     llm_model: str = "anthropic/claude-3-haiku"
@@ -17,7 +21,7 @@ class AutoModeConfig:
     
     # Test mode
     test_mode: bool = True
-    test_channel: str = "raketa_trevoga"
+    test_channel: str = "blockchainews_ai"
     
     # Production channels (region -> channel)
     # Will be filled with real channels later

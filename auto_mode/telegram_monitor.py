@@ -7,14 +7,18 @@ import os
 class TelegramMonitor:
     """
     Monitors Telegram channels for threat-related messages using Telethon.
-    Requires user account (not bot) to read public channels.
+    Supports both user account and bot token authentication.
+    
+    For bot mode: Add bot as admin to your channel, then it can read messages.
     """
     
     def __init__(self, api_id: int, api_hash: str, 
+                 bot_token: Optional[str] = None,
                  on_message: Optional[Callable] = None,
                  on_reply: Optional[Callable] = None):
         self.api_id = api_id
         self.api_hash = api_hash
+        self.bot_token = bot_token
         self.on_message = on_message
         self.on_reply = on_reply
         self.client: Optional[TelegramClient] = None
@@ -30,12 +34,18 @@ class TelegramMonitor:
         self.channels = channels
         self._running = True
         
-        session_path = os.path.join(os.path.dirname(__file__), '..', 'telegram_session')
+        session_name = 'bot_session' if self.bot_token else 'telegram_session'
+        session_path = os.path.join(os.path.dirname(__file__), '..', session_name)
         self.client = TelegramClient(session_path, self.api_id, self.api_hash)
         
-        await self.client.start()
+        # Start with bot token if provided, otherwise use user auth
+        if self.bot_token:
+            await self.client.start(bot_token=self.bot_token)
+            print(f"[TelegramMonitor] Connected as BOT")
+        else:
+            await self.client.start()
+            print(f"[TelegramMonitor] Connected as {(await self.client.get_me()).username}")
         
-        print(f"[TelegramMonitor] Connected as {(await self.client.get_me()).username}")
         print(f"[TelegramMonitor] Monitoring channels: {channels}")
         
         # Set up event handlers
