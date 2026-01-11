@@ -298,24 +298,38 @@ class AutoController:
             print(f"[AutoController] Cannot determine target for threat")
             return
         
-        # Get TARGET coordinates (where threat is heading)
+        # Get TARGET coordinates (where threat is or heading to)
         target_coords = await self._get_coords_for_location(target_name)
         if not target_coords:
             print(f"[AutoController] Cannot geocode target: {target_name}")
             return
         target_lat, target_lng = target_coords
         
-        # Get ORIGIN coordinates based on origin_type
-        origin_coords = await self._get_origin_coords(
-            info.origin, 
-            info.origin_type, 
-            target_lat, 
-            target_lng
-        )
-        marker_lat, marker_lng = origin_coords
+        # Apply target_offset if specified (e.g., "севернее Киева")
+        if info.target_offset:
+            offset_angle = self._heading_to_angle(info.target_offset)
+            offset_km = 40  # 20km offset from city (close enough to see relation)
+            target_lat, target_lng = self._offset_coords(target_lat, target_lng, offset_angle, offset_km)
+            print(f"[AutoController] Target offset: {target_name} + {info.target_offset} ({offset_angle}°)")
         
-        # Calculate angle FROM origin TO target (marker should point toward target)
-        to_angle = self._calculate_bearing(marker_lat, marker_lng, target_lat, target_lng)
+        # Check if heading is specified (e.g., "західним курсом")
+        if info.heading:
+            # Place marker AT target location, use heading as direction
+            marker_lat, marker_lng = target_lat, target_lng
+            # Convert heading direction to angle (захід=270°, схід=90°, etc.)
+            to_angle = self._heading_to_angle(info.heading)
+            print(f"[AutoController] Heading mode: {target_name} -> {info.heading} ({to_angle}°)")
+        else:
+            # Original logic: place marker at origin, point toward target
+            origin_coords = await self._get_origin_coords(
+                info.origin, 
+                info.origin_type, 
+                target_lat, 
+                target_lng
+            )
+            marker_lat, marker_lng = origin_coords
+            to_angle = self._calculate_bearing(marker_lat, marker_lng, target_lat, target_lng)
+            print(f"[AutoController] Origin: {info.origin}({info.origin_type}) -> Target: {target_name}")
         
         # Add small randomness to avoid stacking
         marker_lat += random.uniform(-0.05, 0.05)
@@ -333,8 +347,7 @@ class AutoController:
             source_channel=msg_data.get("channel")
         )
         
-        print(f"[AutoController] Origin: {info.origin}({info.origin_type}) -> Target: {target_name}")
-        print(f"[AutoController] Marker at ({marker_lat:.4f}, {marker_lng:.4f}) pointing {to_angle:.1f}° toward ({target_lat:.4f}, {target_lng:.4f})")
+        print(f"[AutoController] Marker at ({marker_lat:.4f}, {marker_lng:.4f}) pointing {to_angle:.1f}°")
         
         self.threats[threat.id] = threat
         self._next_threat_id += 1
@@ -429,7 +442,7 @@ class AutoController:
         Returns:
             (lat, lng) tuple for marker placement
         """
-        offset_km = 80  # Distance from target for direction-based origins
+        offset_km = 40  # Distance from target for direction-based origins
         
         if origin_type == "city":
             # Geocode the origin city
@@ -473,6 +486,47 @@ class AutoController:
         # Use direction_to_angle to get angle from cardinal direction
         from_angle = LLMProcessor.direction_to_angle(origin)
         return self._offset_coords(target_lat, target_lng, from_angle, offset_km)
+    
+    def _heading_to_angle(self, heading: str) -> float:
+        """
+        Convert heading direction to angle (where threat is GOING TO).
+        
+        Returns:
+            Angle in degrees (0=North, 90=East, 180=South, 270=West)
+        """
+        # IMPORTANT: Check compound directions FIRST, then simple ones
+        # Order matters - longer/compound matches must come before shorter ones
+        heading_checks = [
+            # Ukrainian compound (45°, 135°, 225°, 315°) - CHECK FIRST
+            (["північний схід", "північно-схід", "пн-сх", "північносхід"], 45),
+            (["південний схід", "південно-схід", "пд-сх", "південносхід"], 135),
+            (["південний захід", "південно-захід", "пд-зх", "південнозахід"], 225),
+            (["північний захід", "північно-захід", "пн-зх", "північнозахід"], 315),
+            # Russian compound - CHECK FIRST
+            (["северо-восток", "северовосток", "св", "северо-восточн"], 45),
+            (["юго-восток", "юговосток", "юв", "юго-восточн"], 135),
+            (["юго-запад", "югозапад", "юз", "юго-западн"], 225),
+            (["северо-запад", "северозапад", "сз", "северо-западн"], 315),
+            # Ukrainian simple (0°, 90°, 180°, 270°) - CHECK AFTER compound
+            (["північ", "північн", "пн"], 0),
+            (["схід", "східн", "сх"], 90),
+            (["південь", "південн", "пд"], 180),
+            (["захід", "західн", "зх"], 270),
+            # Russian simple - CHECK AFTER compound
+            (["север", "северн"], 0),
+            (["восток", "восточн"], 90),
+            (["юг", "южн"], 180),
+            (["запад", "западн"], 270),
+        ]
+        
+        heading_lower = heading.lower().strip()
+        for variants, angle in heading_checks:
+            for variant in variants:
+                if variant in heading_lower:
+                    return float(angle)
+        
+        print(f"[AutoController] Unknown heading '{heading}', defaulting to 0° (north)")
+        return 0.0
     
     def _calculate_bearing(self, lat1: float, lng1: float, lat2: float, lng2: float) -> float:
         """

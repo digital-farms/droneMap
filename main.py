@@ -2,6 +2,7 @@ import asyncio
 import sys
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Set
@@ -78,7 +79,12 @@ async def send_to_telegram(file_path: str):
 # API Endpoints
 @app.get("/api/state")
 async def get_state():
-    return current_state
+    # Merge manual state with AUTO mode threats
+    state = current_state.model_dump()
+    if auto_controller and auto_mode_enabled:
+        auto_threats = auto_controller.get_all_threats()
+        state["auto_threats"] = auto_threats
+    return state
 
 @app.post("/api/state")
 async def update_state(state: MapState):
@@ -149,20 +155,7 @@ async def broadcast_to_websockets(message: dict):
 
 async def on_auto_threat_add(threat: dict):
     """Callback when AUTO mode adds a threat"""
-    global current_state
-    
-    # Add to current state
-    new_threat = Threat(
-        id=threat["id"],
-        type=threat["type"],
-        lat=threat["lat"],
-        lng=threat["lng"],
-        angle=threat["angle"],
-        count=threat.get("count", 1)
-    )
-    current_state.threats.append(new_threat)
-    
-    # Broadcast to WebSocket clients
+    # Broadcast to WebSocket clients (don't add to current_state - it's managed by auto_controller)
     await broadcast_to_websockets({
         "type": "threat_add",
         "data": threat
@@ -170,10 +163,7 @@ async def on_auto_threat_add(threat: dict):
 
 async def on_auto_threat_remove(data: dict):
     """Callback when AUTO mode removes a threat"""
-    global current_state
-    
     threat_id = data["id"]
-    current_state.threats = [t for t in current_state.threats if t.id != threat_id]
     
     await broadcast_to_websockets({
         "type": "threat_remove",
@@ -265,7 +255,42 @@ async def get_auto_status():
 
 # ==================== STATIC FILES ====================
 
-# Serve static files (Frontend)
+@app.get("/viewer")
+async def viewer_page():
+    """Serve read-only viewer page"""
+    return FileResponse("viewer.html")
+
+# Auto-start AUTO mode on startup if AUTO_START env var is set
+@app.on_event("startup")
+async def startup_event():
+    if os.getenv("AUTO_START", "").lower() == "true":
+        print("[Startup] AUTO_START enabled, starting AUTO mode...")
+        # Small delay to let server fully start
+        await asyncio.sleep(2)
+        try:
+            await start_auto_mode()
+            print("[Startup] AUTO mode started successfully")
+        except Exception as e:
+            print(f"[Startup] Failed to start AUTO mode: {e}")
+
+# Serve main files with no-cache headers
+@app.get("/")
+async def serve_index():
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/index.html")
+async def serve_index_html():
+    return FileResponse("index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/styles.css")
+async def serve_styles():
+    return FileResponse("styles.css", media_type="text/css", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+@app.get("/script.js")
+async def serve_script():
+    return FileResponse("script.js", media_type="application/javascript", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+# Serve static files (Frontend) - for other assets
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 if __name__ == "__main__":

@@ -31,16 +31,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     initClock();
     
+    // Always load state from server (both admin and viewer)
+    await loadStateFromServer();
+    
     if (isViewMode) {
-        // Hide controls in view mode
-        const controls = document.getElementById('controls');
-        if (controls) controls.style.display = 'none';
+        // Add view-mode class to body for CSS styling
+        document.body.classList.add('view-mode');
         
-        const helpBtn = document.getElementById('help-btn');
-        if (helpBtn) helpBtn.style.display = 'none';
-        
-        // Load state from server
-        await loadStateFromServer();
+        // Force map to recalculate size after CSS changes
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
     }
     
     // Initialize WebSocket for real-time updates
@@ -806,23 +807,74 @@ function updateOverlay() {
     const dateEl = document.getElementById('overlay-date');
     const countEl = document.getElementById('overlay-count');
     
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('uk-UA', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
     if (dateEl) {
-        const now = new Date();
         const dateStr = now.toLocaleDateString('uk-UA', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         });
-        const timeStr = now.toLocaleTimeString('uk-UA', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
         dateEl.textContent = `${dateStr} ${timeStr}`;
     }
     
+    // Count threats by type
+    const counts = {
+        drone: 0,
+        missile: 0,
+        ballistic: 0,
+        hypersonic: 0,
+        nuclear: 0
+    };
+    threats.forEach(t => {
+        counts[t.type] = (counts[t.type] || 0) + (t.count || 1);
+    });
+    const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
+    
     if (countEl) {
-        const droneCount = threats.reduce((sum, t) => t.type === 'drone' ? sum + t.count : sum, 0);
-        countEl.textContent = `${droneCount} x БПЛА`;
+        countEl.textContent = `${counts.drone} x БПЛА`;
+    }
+    
+    // Update viewer counter (for view mode)
+    updateViewerCounter(timeStr, counts, totalCount);
+}
+
+function updateViewerCounter(timeStr, counts, totalCount) {
+    const timeEl = document.getElementById('viewer-time');
+    const threatsEl = document.getElementById('viewer-threats');
+    
+    if (timeEl) {
+        timeEl.textContent = timeStr;
+    }
+    
+    if (threatsEl) {
+        let html = '';
+        
+        if (totalCount === 0) {
+            html = '<span class="threat-badge clear">✓ Чисто</span>';
+        } else {
+            if (counts.drone > 0) {
+                html += `<span class="threat-badge drone"><img src="icons/drone.svg" style="filter: brightness(0) saturate(100%) invert(67%) sepia(65%) saturate(588%) hue-rotate(360deg);">${counts.drone}</span>`;
+            }
+            if (counts.missile > 0) {
+                html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2053%) hue-rotate(337deg);">${counts.missile}</span>`;
+            }
+            if (counts.ballistic > 0) {
+                html += `<span class="threat-badge ballistic"><img src="icons/ballistic.svg" style="filter: brightness(0) saturate(100%) invert(20%) sepia(98%) saturate(3644%) hue-rotate(351deg);">${counts.ballistic}</span>`;
+            }
+            if (counts.hypersonic > 0) {
+                html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(26%) sepia(89%) saturate(2637%) hue-rotate(255deg);">${counts.hypersonic}</span>`;
+            }
+            if (counts.nuclear > 0) {
+                html += `<span class="threat-badge missile"><img src="icons/nuclear.svg" style="filter: brightness(0) saturate(100%) invert(64%) sepia(52%) saturate(522%) hue-rotate(93deg);">${counts.nuclear}</span>`;
+            }
+        }
+        
+        threatsEl.innerHTML = html;
     }
 }
 
@@ -850,7 +902,25 @@ async function loadStateFromServer() {
         const response = await fetch('/api/state');
         const state = await response.json();
         
-        threats = state.threats || [];
+        // Clear existing markers first
+        markersLayer.clearLayers();
+        trajectoriesLayer.clearLayers();
+        threats = [];
+        
+        // Load manual threats
+        if (state.threats && state.threats.length > 0) {
+            state.threats.forEach(t => {
+                threats.push(t);
+            });
+        }
+        
+        // Load AUTO mode threats (separate from manual)
+        if (state.auto_threats && state.auto_threats.length > 0) {
+            state.auto_threats.forEach(t => {
+                t.isAuto = true;
+                threats.push(t);
+            });
+        }
         
         // Render markers
         threats.forEach(threat => addMarker(threat));
@@ -933,6 +1003,7 @@ function initWebSocket() {
     
     wsConnection.onopen = () => {
         console.log('[WS] Connected');
+        updateViewerStatus(true);
         if (wsReconnectTimer) {
             clearTimeout(wsReconnectTimer);
             wsReconnectTimer = null;
@@ -950,12 +1021,25 @@ function initWebSocket() {
     
     wsConnection.onclose = () => {
         console.log('[WS] Disconnected, reconnecting in 3s...');
+        updateViewerStatus(false);
         wsReconnectTimer = setTimeout(initWebSocket, 3000);
     };
     
     wsConnection.onerror = (error) => {
         console.error('[WS] Error:', error);
+        updateViewerStatus(false);
     };
+}
+
+function updateViewerStatus(connected) {
+    const dot = document.getElementById('viewer-status-dot');
+    if (dot) {
+        if (connected) {
+            dot.classList.remove('offline');
+        } else {
+            dot.classList.add('offline');
+        }
+    }
 }
 
 function handleWebSocketMessage(msg) {

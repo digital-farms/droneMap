@@ -8,9 +8,11 @@ class ThreatInfo:
     action: str  # "add", "update", "remove", "ignore"
     threat_type: Optional[str] = None  # "drone", "missile", "ballistic", "hypersonic", "nuclear"
     count: int = 1
-    target: Optional[str] = None  # City/region WHERE threat is heading
+    target: Optional[str] = None  # City/region WHERE threat is / heading to
+    target_offset: Optional[str] = None  # Offset from target (e.g., "північ" for "севернее Киева")
     origin: Optional[str] = None  # City/region/direction WHERE threat is coming FROM
     origin_type: str = "direction"  # "city", "sea", "direction", "region"
+    heading: Optional[str] = None  # Direct heading direction (e.g., "захід" for "західним курсом")
     confidence: float = 0.0
     raw_response: Optional[str] = None
 
@@ -91,9 +93,11 @@ class LLMProcessor:
       "action": "add" | "remove" | "ignore",
       "threat_type": "drone" | "missile" | "ballistic" | "hypersonic" | "nuclear",
       "count": число,
-      "target": "місто/область КУДИ летить",
+      "target": "місто/область",
+      "target_offset": "напрямок від міста (тільки для 'севернее/північніше/східніше' і т.д.)",
       "origin": "місто/область/напрямок ЗВІДКИ летить",
-      "origin_type": "city" | "sea" | "direction" | "region"
+      "origin_type": "city" | "sea" | "direction" | "region",
+      "heading": "напрямок КУДИ летить (тільки для 'курсом')"
     }
   ]
 }
@@ -138,6 +142,27 @@ class LLMProcessor:
 
 12. "шахеди на Одесу" (без напрямку):
 {"threats": [{"action": "add", "threat_type": "drone", "count": 1, "target": "Одеса", "origin": "Росія", "origin_type": "direction"}]}
+
+13. "2 БПЛА на півночі Київщини західним курсом" - ВАЖЛИВО: використай heading для "курсом":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 2, "target": "північ Київської області", "heading": "захід"}]}
+
+14. "3 над Черніговом східним курсом":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 3, "target": "Чернігів", "heading": "схід"}]}
+
+15. "5 БПЛА над Полтавою південним курсом":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 5, "target": "Полтава", "heading": "південь"}]}
+
+16. "3 севернее Киева" - ВАЖЛИВО: target_offset для відносного положення:
+{"threats": [{"action": "add", "threat_type": "drone", "count": 3, "target": "Київ", "target_offset": "північ", "origin": "Росія", "origin_type": "direction"}]}
+
+17. "2 восточнее Винницы":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 2, "target": "Вінниця", "target_offset": "схід", "origin": "Росія", "origin_type": "direction"}]}
+
+18. "5 південніше Харкова західним курсом":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 5, "target": "Харків", "target_offset": "південь", "heading": "захід"}]}
+
+19. "4 на північний захід від Одеси":
+{"threats": [{"action": "add", "threat_type": "drone", "count": 4, "target": "Одеса", "target_offset": "північний захід", "origin": "Росія", "origin_type": "direction"}]}
 
 ТИПИ ЗАГРОЗ:
 - "drone" - БПЛА, шахед, герань, мопед, дрон, безпілотник
@@ -208,8 +233,10 @@ ORIGIN_TYPE:
                     threat_type=t.get("threat_type", "drone"),
                     count=t.get("count", 1),
                     target=t.get("target"),
+                    target_offset=t.get("target_offset"),
                     origin=t.get("origin"),
                     origin_type=t.get("origin_type", "direction"),
+                    heading=t.get("heading"),
                     confidence=t.get("confidence", 0.7),
                     raw_response=content
                 ))
@@ -272,7 +299,7 @@ ORIGIN_TYPE:
             "юго-запад": 225, "юго-западн": 225, "юз": 225,
             "югозапад": 225, "югозападн": 225,
             # West
-            "запад": 270, "западн": 270, "зап": 270,
+            "запад": 270, "западн": 270, "зап": 270, "захід": 270,
             # Northwest
             "северо-запад": 315, "северо-западн": 315, "сз": 315,
             "северозапад": 315, "северозападн": 315,  # северозападнее, северозападней

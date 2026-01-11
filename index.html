@@ -7,7 +7,13 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=4">
+    <!-- Immediately apply view-mode class to prevent flash of admin UI -->
+    <script>
+        if (new URLSearchParams(window.location.search).get('view') === 'true') {
+            document.documentElement.classList.add('view-mode');
+        }
+    </script>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -115,6 +121,17 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Viewer Counter (only visible in view mode) -->
+        <div class="viewer-counter" id="viewer-counter">
+            <div class="counter-left">
+                <span class="status-dot" id="viewer-status-dot"></span>
+                <span class="counter-time" id="viewer-time">00:00</span>
+            </div>
+            <div class="counter-threats" id="viewer-threats">
+                <!-- Dynamic threat badges -->
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -128,6 +145,6 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <!-- TopoJSON Client -->
     <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-    <script src="script.js?v=10"></script>
+    <script src="script.js?v=15"></script>
 </body>
 </html>

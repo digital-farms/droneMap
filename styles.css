@@ -615,3 +615,161 @@ body, html {
     border-radius: 3px;
     font-weight: 600;
 }
+
+/* ==========================================
+   VIEW MODE - Fullscreen map without controls
+   ========================================== */
+html.view-mode,
+html.view-mode body {
+    background: #0b0d14 !important;
+}
+
+html.view-mode #controls,
+body.view-mode #controls {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+html.view-mode #help-btn,
+body.view-mode #help-btn {
+    display: none !important;
+}
+
+html.view-mode #map-overlay,
+body.view-mode #map-overlay {
+    display: none !important;
+}
+
+html.view-mode #app,
+body.view-mode #app {
+    background: transparent !important;
+    display: block !important;
+}
+
+html.view-mode #map,
+body.view-mode #map {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+/* Hide notifications in view mode */
+html.view-mode .auto-notification,
+body.view-mode .auto-notification {
+    display: none !important;
+}
+
+/* Viewer floating UI - stylish pills */
+.viewer-counter {
+    display: none;
+}
+
+html.view-mode .viewer-counter,
+body.view-mode .viewer-counter {
+    display: flex !important;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(15, 17, 26, 0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.viewer-counter .counter-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+}
+
+.viewer-counter .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+    animation: pulse-glow 2s infinite;
+}
+
+.viewer-counter .status-dot.offline {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+    animation: none;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px #22c55e; }
+    50% { opacity: 0.6; box-shadow: 0 0 4px #22c55e; }
+}
+
+.viewer-counter .counter-time {
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+}
+
+.viewer-counter .counter-threats {
+    display: flex;
+    gap: 6px;
+}
+
+.viewer-counter .threat-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.viewer-counter .threat-badge:hover {
+    transform: translateY(-2px);
+}
+
+.viewer-counter .threat-badge img {
+    width: 18px;
+    height: 18px;
+}
+
+.viewer-counter .threat-badge.drone {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.1));
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.viewer-counter .threat-badge.missile {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(239, 68, 68, 0.1));
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.viewer-counter .threat-badge.ballistic {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(220, 38, 38, 0.1));
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.viewer-counter .threat-badge.clear {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1));
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
