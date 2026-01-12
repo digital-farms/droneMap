@@ -9,6 +9,7 @@ let selectedThreatId = null;
 let currentTool = 'drone';
 let regionsLayer = null;
 let markersLayer = null;
+let alertRegions = new Set(); // Track regions with active threats
 
 // Trajectory lines layer
 let trajectoriesLayer = null;
@@ -133,11 +134,15 @@ async function loadRegions() {
         const geojson = topojson.feature(topoData, topoData.objects.UKR_adm1);
         
         regionsLayer = L.geoJSON(geojson, {
-            style: {
-                color: '#374151',
-                weight: 1,
-                fillColor: 'transparent',
-                fillOpacity: 0
+            style: (feature) => {
+                const regionName = feature.properties.NAME_1;
+                const isAlert = alertRegions.has(regionName);
+                return {
+                    color: isAlert ? '#ef4444' : '#374151',
+                    weight: isAlert ? 2 : 1,
+                    fillColor: isAlert ? '#ef4444' : 'transparent',
+                    fillOpacity: isAlert ? 0.15 : 0
+                };
             },
             onEachFeature: (feature, layer) => {
                 // Store region name for lookup
@@ -845,6 +850,9 @@ function updateOverlay() {
         countEl.textContent = `${counts.drone} x БПЛА`;
     }
     
+    // Update alert regions
+    updateAlertRegions();
+    
     // Update viewer counter (for view mode)
     updateViewerCounter(timeStr, counts, totalCount);
 }
@@ -991,6 +999,39 @@ document.addEventListener('click', (e) => {
         closeHelp();
     }
 });
+
+// ==========================================
+// Alert Regions
+// ==========================================
+
+function updateAlertRegions() {
+    if (!regionsLayer) return;
+    
+    // Clear previous alert regions
+    alertRegions.clear();
+    
+    // Find regions with active threats
+    threats.forEach(threat => {
+        const region = getRegionForPoint(threat.lat, threat.lng);
+        if (region) {
+            alertRegions.add(region);
+        }
+    });
+    
+    // Update region styles
+    regionsLayer.eachLayer(layer => {
+        const regionName = layer.regionName;
+        const isAlert = alertRegions.has(regionName);
+        
+        layer.setStyle({
+            color: isAlert ? '#374151a8' : '#374151a8',
+            weight: isAlert ? 2 : 1,
+            fillColor: isAlert ? '#ef4444' : 'transparent',
+            fillOpacity: isAlert ? 0.025 : 0,
+            
+        });
+    });
+}
 
 // ==========================================
 // AUTO Mode Functions
