@@ -33,7 +33,7 @@ class AutoModeConfig:
     })
     
     # TTL for threats in minutes (auto-remove after this time if no update)
-    threat_ttl_minutes: int = 30
+    threat_ttl_minutes: int = 10
     
     # Polling intervals
     alert_poll_interval: int = 30  # seconds
