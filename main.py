@@ -260,18 +260,17 @@ async def viewer_page():
     """Serve read-only viewer page"""
     return FileResponse("viewer.html")
 
-# Auto-start AUTO mode on startup if AUTO_START env var is set
+# Auto-start AUTO mode on startup (always enabled by default)
 @app.on_event("startup")
 async def startup_event():
-    if os.getenv("AUTO_START", "").lower() == "true":
-        print("[Startup] AUTO_START enabled, starting AUTO mode...")
-        # Small delay to let server fully start
-        await asyncio.sleep(2)
-        try:
-            await start_auto_mode()
-            print("[Startup] AUTO mode started successfully")
-        except Exception as e:
-            print(f"[Startup] Failed to start AUTO mode: {e}")
+    print("[Startup] Starting AUTO mode...")
+    # Small delay to let server fully start
+    await asyncio.sleep(2)
+    try:
+        await start_auto_mode()
+        print("[Startup] AUTO mode started successfully")
+    except Exception as e:
+        print(f"[Startup] Failed to start AUTO mode: {e}")
 
 # Serve main files with no-cache headers
 @app.get("/")
