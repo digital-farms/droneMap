@@ -390,7 +390,6 @@ function createMarkerHtml(threat) {
                 justify-content: center;
                 width: 40px;
                 height: 40px;
-                filter: drop-shadow(0 0 10px ${color});
             ">
                 <img src="${config.svg}" style="width: 32px; height: 32px; filter: ${colorFilter};" />
             </div>
