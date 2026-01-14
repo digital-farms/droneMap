@@ -33,7 +33,16 @@ class AutoModeConfig:
     })
     
     # TTL for threats in minutes (auto-remove after this time if no update)
-    threat_ttl_minutes: int = 10
+    threat_ttl_minutes: int = 15  # default fallback
+    
+    # Per-type TTL in minutes
+    threat_ttl_by_type: Dict[str, int] = field(default_factory=lambda: {
+        "drone": 15,
+        "missile": 7,      # cruise missile / КР
+        "ballistic": 5,
+        "hypersonic": 7,
+        "nuclear": 5
+    })
     
     # Polling intervals
     alert_poll_interval: int = 30  # seconds
@@ -45,7 +54,7 @@ class AutoModeConfig:
         # Крылатые ракеты
         "ракет", "кр", "бр", "калібр", "калибр", "х-101", "x-101", "х-555", "крилат", "крылат",
         # Баллистика
-        "баліст", "балист", "ціль", "цілі", "КАБ", "іскандер", "искандер", "точка-у",
+        "баліст", "балліст", "баллист", "балист", "цель", "цели", "ціль", "цілі", "КАБ", "іскандер", "искандер", "точка-у",
         # Гиперзвук
         "кінжал", "кинжал", "гіперзвук", "гиперзвук", "сверхзвук", "циркон",
         # Ядерная

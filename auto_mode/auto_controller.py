@@ -393,13 +393,21 @@ class AutoController:
             await asyncio.sleep(60)  # Check every minute
             
             now = datetime.now()
-            ttl = timedelta(minutes=self.config.threat_ttl_minutes)
+            to_remove = []
             
-            to_remove = [tid for tid, t in self.threats.items() 
-                         if now - t.updated_at > ttl]
+            for tid, t in self.threats.items():
+                # Get TTL for this threat type
+                ttl_minutes = self.config.threat_ttl_by_type.get(
+                    t.type, 
+                    self.config.threat_ttl_minutes
+                )
+                ttl = timedelta(minutes=ttl_minutes)
+                
+                if now - t.updated_at > ttl:
+                    to_remove.append((tid, t.type, ttl_minutes))
             
-            for tid in to_remove:
-                print(f"[AutoController] TTL expired for threat {tid}")
+            for tid, threat_type, ttl_min in to_remove:
+                print(f"[AutoController] TTL expired for {threat_type} threat {tid} (TTL={ttl_min}min)")
                 await self._remove_threat(tid)
     
     def _offset_coords(self, lat: float, lng: float, angle_deg: float, distance_km: float) -> tuple:

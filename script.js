@@ -869,7 +869,7 @@ function updateViewerCounter(timeStr, counts, totalCount) {
         let html = '';
         
         if (totalCount === 0) {
-            html = '<span class="threat-badge clear">✓ Чисто</span>';
+            html = '<span class="threat-badge clear">Чисто</span>';
         } else {
             if (counts.drone > 0) {
                 html += `<span class="threat-badge drone"><img src="icons/drone.svg" style="filter: brightness(0) saturate(100%) invert(67%) sepia(65%) saturate(588%) hue-rotate(360deg);">${counts.drone}</span>`;
