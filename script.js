@@ -356,7 +356,7 @@ function getColorFilter(hexColor) {
     const filters = {
         '#f59e0b': 'brightness(0) saturate(100%) invert(67%) sepia(74%) saturate(2243%) hue-rotate(360deg) brightness(101%) contrast(101%)', // Orange - drone
         '#ef4444': 'brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2066%) hue-rotate(338deg) brightness(95%) contrast(97%)', // Red - missile
-        '#8b5cf6': 'brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg) brightness(97%) contrast(96%)', // Purple - ballistic
+        '#a855f7': 'brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg) brightness(97%) contrast(96%)', // Purple - ballistic
         '#06b6d4': 'brightness(0) saturate(100%) invert(63%) sepia(96%) saturate(1352%) hue-rotate(152deg) brightness(95%) contrast(94%)', // Cyan - hypersonic
         '#facc15': 'brightness(0) saturate(100%) invert(83%) sepia(46%) saturate(1057%) hue-rotate(359deg) brightness(103%) contrast(97%)', // Yellow - nuclear
     };
@@ -369,7 +369,7 @@ function createMarkerHtml(threat) {
     const typeConfig = {
         drone: { svg: 'icons/drone.svg', color: '#f59e0b' },
         missile: { svg: 'icons/missile.svg', color: '#ef4444' },
-        ballistic: { svg: 'icons/ballistic.svg', color: '#8b5cf6' },
+        ballistic: { svg: 'icons/ballistic.svg', color: '#a855f7' },
         hypersonic: { svg: 'icons/missile.svg', color: '#06b6d4' },
         nuclear: { svg: 'icons/nuclear.svg', color: '#facc15' }
     };
@@ -441,7 +441,7 @@ function getColorForType(type) {
     const colors = {
         drone: '#f59e0b',      // Orange
         missile: '#ef4444',     // Red
-        ballistic: '#8b5cf6',   // Purple
+        ballistic: '#a855f7',   // Purple
         hypersonic: '#06b6d4',  // Cyan
         nuclear: '#facc15'      // Yellow
     };
@@ -878,7 +878,7 @@ function updateViewerCounter(timeStr, counts, totalCount) {
                 html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2053%) hue-rotate(337deg);">${counts.missile}</span>`;
             }
             if (counts.ballistic > 0) {
-                html += `<span class="threat-badge ballistic"><img src="icons/ballistic.svg" style="filter: brightness(0) saturate(100%) invert(20%) sepia(98%) saturate(3644%) hue-rotate(351deg);">${counts.ballistic}</span>`;
+                html += `<span class="threat-badge ballistic"><img src="icons/ballistic.svg" style="filter: brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg);">${counts.ballistic}</span>`;
             }
             if (counts.hypersonic > 0) {
                 html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(26%) sepia(89%) saturate(2637%) hue-rotate(255deg);">${counts.hypersonic}</span>`;
@@ -1129,6 +1129,11 @@ function handleWebSocketMessage(msg) {
             // Batch processing status update
             updateBatchTimer(msg.data);
             break;
+            
+        case 'llm_result':
+            // LLM processing result for feed
+            handleFeedUpdate(msg.data);
+            break;
     }
 }
 
@@ -1182,6 +1187,59 @@ function startBatchTimerCountdown() {
 // Start batch timer countdown when page loads (for view mode)
 if (isViewMode) {
     startBatchTimerCountdown();
+}
+
+// Threat Feed functionality
+const MAX_FEED_ITEMS = 10;
+
+function addFeedItem(data) {
+    const feed = document.getElementById('threat-feed');
+    if (!feed) return;
+    
+    const item = document.createElement('div');
+    item.className = 'threat-feed-item';
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
+    
+    const typeLabels = {
+        'drone': 'БПЛА',
+        'missile': 'КР',
+        'ballistic': 'Баліст.',
+        'hypersonic': 'Гіперзвук'
+    };
+    
+    const typeLabel = typeLabels[data.type] || data.type;
+    const countText = data.count > 1 ? ` x${data.count}` : '';
+    const targetText = data.target || data.region || 'Невідомо';
+    
+    item.innerHTML = `
+        <div class="feed-time">${timeStr} ${dateStr}</div>
+        <div class="feed-content">
+            <span class="feed-type ${data.type}">${typeLabel}</span>
+            ${targetText}${countText}
+        </div>
+    `;
+    
+    // Add to bottom of feed
+    feed.appendChild(item);
+    
+    // Auto-scroll to bottom (newest)
+    feed.scrollTop = feed.scrollHeight;
+    
+    // Limit items
+    while (feed.children.length > MAX_FEED_ITEMS) {
+        feed.removeChild(feed.firstChild);
+    }
+}
+
+function handleFeedUpdate(data) {
+    if (data.threats && Array.isArray(data.threats)) {
+        data.threats.forEach(threat => addFeedItem(threat));
+    } else if (data.type && data.target) {
+        addFeedItem(data);
+    }
 }
 
 function addAutoThreat(data) {

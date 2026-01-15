@@ -36,13 +36,15 @@ class AutoController:
                  on_threat_remove: Optional[Callable] = None,
                  on_threat_update: Optional[Callable] = None,
                  on_state_change: Optional[Callable] = None,
-                 on_batch_status: Optional[Callable] = None):
+                 on_batch_status: Optional[Callable] = None,
+                 on_llm_result: Optional[Callable] = None):
         self.config = config
         self.on_threat_add = on_threat_add
         self.on_threat_remove = on_threat_remove
         self.on_threat_update = on_threat_update
         self.on_state_change = on_state_change
         self.on_batch_status = on_batch_status
+        self.on_llm_result = on_llm_result
         
         # Components
         self.alert_monitor = AlertMonitor(on_alert_change=self._on_alert_change)
@@ -464,6 +466,15 @@ class AutoController:
             for threat_info in threats:
                 if threat_info.confidence < 0.5:
                     continue
+                
+                # Send to feed
+                if self.on_llm_result:
+                    await self.on_llm_result({
+                        "type": threat_info.threat_type or "drone",
+                        "target": threat_info.target,
+                        "count": threat_info.count,
+                        "action": threat_info.action
+                    })
                 
                 # Use first message's msg_data as reference
                 msg_data = messages[0]["msg_data"] if messages else {}

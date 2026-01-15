@@ -184,6 +184,13 @@ async def on_batch_status(data: dict):
         "data": data
     })
 
+async def on_llm_result(data: dict):
+    """Callback for LLM processing results (for feed)"""
+    await broadcast_to_websockets({
+        "type": "llm_result",
+        "data": data
+    })
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -227,7 +234,8 @@ async def start_auto_mode():
         on_threat_add=on_auto_threat_add,
         on_threat_remove=on_auto_threat_remove,
         on_state_change=on_auto_state_change,
-        on_batch_status=on_batch_status
+        on_batch_status=on_batch_status,
+        on_llm_result=on_llm_result
     )
     
     # Start in background
