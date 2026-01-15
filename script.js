@@ -1222,7 +1222,7 @@ if (isViewMode) {
 }
 
 // Threat Feed functionality
-const MAX_FEED_ITEMS = 10;
+const MAX_FEED_ITEMS = 50;
 
 function addFeedItem(data) {
     const feed = document.getElementById('threat-feed');
