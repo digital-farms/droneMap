@@ -370,7 +370,7 @@ function createMarkerHtml(threat) {
         drone: { svg: 'icons/drone.svg', color: '#f59e0b' },
         missile: { svg: 'icons/missile.svg', color: '#ef4444' },
         ballistic: { svg: 'icons/ballistic.svg', color: '#a855f7' },
-        hypersonic: { svg: 'icons/missile.svg', color: '#06b6d4' },
+        hypersonic: { svg: 'icons/hypersonic.svg', color: '#06b6d4' },
         nuclear: { svg: 'icons/nuclear.svg', color: '#facc15' }
     };
     
@@ -859,38 +859,64 @@ function updateOverlay() {
 
 function updateViewerCounter(timeStr, counts, totalCount) {
     const timeEl = document.getElementById('viewer-time');
-    const threatsEl = document.getElementById('viewer-threats');
+    const totalEl = document.getElementById('threats-total');
+    const btnEl = document.getElementById('viewer-threats-btn');
+    const popupContent = document.getElementById('threats-popup-content');
     
     if (timeEl) {
         timeEl.textContent = timeStr;
     }
     
-    if (threatsEl) {
+    // Update compact button
+    if (totalEl && btnEl) {
+        if (totalCount === 0) {
+            totalEl.textContent = '✓';
+            btnEl.classList.add('clear');
+        } else {
+            totalEl.textContent = totalCount;
+            btnEl.classList.remove('clear');
+        }
+    }
+    
+    // Update popup content
+    if (popupContent) {
         let html = '';
         
-        if (totalCount === 0) {
-            html = '<span class="threat-badge clear">Чисто</span>';
-        } else {
-            if (counts.drone > 0) {
-                html += `<span class="threat-badge drone"><img src="icons/drone.svg" style="filter: brightness(0) saturate(100%) invert(67%) sepia(65%) saturate(588%) hue-rotate(360deg);">${counts.drone}</span>`;
-            }
-            if (counts.missile > 0) {
-                html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2053%) hue-rotate(337deg);">${counts.missile}</span>`;
-            }
-            if (counts.ballistic > 0) {
-                html += `<span class="threat-badge ballistic"><img src="icons/ballistic.svg" style="filter: brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg);">${counts.ballistic}</span>`;
-            }
-            if (counts.hypersonic > 0) {
-                html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(26%) sepia(89%) saturate(2637%) hue-rotate(255deg);">${counts.hypersonic}</span>`;
-            }
-            if (counts.nuclear > 0) {
-                html += `<span class="threat-badge missile"><img src="icons/nuclear.svg" style="filter: brightness(0) saturate(100%) invert(64%) sepia(52%) saturate(522%) hue-rotate(93deg);">${counts.nuclear}</span>`;
-            }
+        if (counts.drone > 0) {
+            html += `<span class="threat-badge drone"><img src="icons/drone.svg" style="filter: brightness(0) saturate(100%) invert(67%) sepia(65%) saturate(588%) hue-rotate(360deg);">${counts.drone}</span>`;
+        }
+        if (counts.missile > 0) {
+            html += `<span class="threat-badge missile"><img src="icons/missile.svg" style="filter: brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2053%) hue-rotate(337deg);">${counts.missile}</span>`;
+        }
+        if (counts.ballistic > 0) {
+            html += `<span class="threat-badge ballistic"><img src="icons/ballistic.svg" style="filter: brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg);">${counts.ballistic}</span>`;
+        }
+        if (counts.hypersonic > 0) {
+            html += `<span class="threat-badge hypersonic"><img src="icons/hypersonic.svg" style="filter: brightness(0) saturate(100%) invert(63%) sepia(96%) saturate(1352%) hue-rotate(152deg) brightness(95%) contrast(94%);">${counts.hypersonic}</span>`;
+        }
+        if (counts.nuclear > 0) {
+            html += `<span class="threat-badge nuclear"><img src="icons/nuclear.svg" style="filter: brightness(0) saturate(100%) invert(83%) sepia(46%) saturate(1057%) hue-rotate(359deg);">${counts.nuclear}</span>`;
         }
         
-        threatsEl.innerHTML = html;
+        popupContent.innerHTML = html;
     }
 }
+
+function toggleThreatsPopup() {
+    const popup = document.getElementById('threats-popup');
+    if (popup) {
+        popup.classList.toggle('show');
+    }
+}
+
+// Close popup when clicking outside
+document.addEventListener('click', (e) => {
+    const popup = document.getElementById('threats-popup');
+    const btn = document.getElementById('viewer-threats-btn');
+    if (popup && btn && !popup.contains(e.target) && !btn.contains(e.target)) {
+        popup.classList.remove('show');
+    }
+});
 
 // ==========================================
 // Server Sync
