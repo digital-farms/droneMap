@@ -177,6 +177,13 @@ async def on_auto_state_change(data: dict):
         "data": data
     })
 
+async def on_batch_status(data: dict):
+    """Callback for batch processing status updates"""
+    await broadcast_to_websockets({
+        "type": "batch_status",
+        "data": data
+    })
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -219,7 +226,8 @@ async def start_auto_mode():
         auto_config,
         on_threat_add=on_auto_threat_add,
         on_threat_remove=on_auto_threat_remove,
-        on_state_change=on_auto_state_change
+        on_state_change=on_auto_state_change,
+        on_batch_status=on_batch_status
     )
     
     # Start in background

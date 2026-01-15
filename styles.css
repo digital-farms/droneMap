@@ -679,13 +679,14 @@ body.view-mode .viewer-counter {
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-    gap: 8px;
-    padding: 8px;
+    gap: 10px;
+    padding: 8px 12px;
     background: rgba(15, 17, 26, 0.85);
     backdrop-filter: blur(12px);
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    overflow: visible;
 }
 
 .viewer-counter .counter-left {
@@ -770,4 +771,55 @@ body.view-mode .viewer-counter {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1));
     color: #22c55e;
     border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* Batch Timer - circular countdown (inside viewer-counter) */
+.batch-timer {
+    display: none;
+}
+
+html.view-mode .batch-timer,
+body.view-mode .batch-timer {
+    display: flex !important;
+    position: relative;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.batch-timer svg {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    left: -4px;
+    top: -4px;
+    transform: rotate(-90deg);
+    overflow: visible;
+}
+
+.batch-timer .ring-bg {
+    fill: none;
+    stroke: rgba(220, 38, 38, 0.2);
+    stroke-width: 2.5;
+}
+
+.batch-timer .ring-progress {
+    fill: none;
+    stroke: #dc2626;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.batch-timer-seconds {
+    font-size: 15px;
+    font-weight: 700;
+    color: #dc2626;
+    text-shadow: 0 0 6px rgba(220, 38, 38, 0.9);
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    z-index: 1;
 }

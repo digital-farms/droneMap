@@ -1124,7 +1124,64 @@ function handleWebSocketMessage(msg) {
         case 'pong':
             // Heartbeat response
             break;
+            
+        case 'batch_status':
+            // Batch processing status update
+            updateBatchTimer(msg.data);
+            break;
     }
+}
+
+// Batch timer state
+let batchTimerInterval = null;
+let batchSecondsLeft = 30;
+const BATCH_INTERVAL = 30;
+
+function updateBatchTimer(data) {
+    if (data.seconds_left !== undefined) {
+        batchSecondsLeft = data.seconds_left;
+        updateBatchTimerDisplay();
+    }
+    
+    if (data.reset) {
+        batchSecondsLeft = BATCH_INTERVAL;
+        updateBatchTimerDisplay();
+    }
+}
+
+function updateBatchTimerDisplay() {
+    const secondsEl = document.getElementById('batch-timer-seconds');
+    const progressEl = document.getElementById('batch-ring-progress');
+    
+    if (secondsEl) {
+        secondsEl.textContent = Math.max(0, Math.round(batchSecondsLeft));
+    }
+    
+    if (progressEl) {
+        // Calculate progress (0-100)
+        const progress = ((BATCH_INTERVAL - batchSecondsLeft) / BATCH_INTERVAL) * 100;
+        progressEl.style.strokeDashoffset = 100 - progress;
+    }
+}
+
+function startBatchTimerCountdown() {
+    if (batchTimerInterval) {
+        clearInterval(batchTimerInterval);
+    }
+    
+    batchTimerInterval = setInterval(() => {
+        batchSecondsLeft = Math.max(0, batchSecondsLeft - 1);
+        updateBatchTimerDisplay();
+        
+        if (batchSecondsLeft <= 0) {
+            batchSecondsLeft = BATCH_INTERVAL;
+        }
+    }, 1000);
+}
+
+// Start batch timer countdown when page loads (for view mode)
+if (isViewMode) {
+    startBatchTimerCountdown();
 }
 
 function addAutoThreat(data) {

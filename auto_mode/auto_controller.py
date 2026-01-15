@@ -35,12 +35,14 @@ class AutoController:
                  on_threat_add: Optional[Callable] = None,
                  on_threat_remove: Optional[Callable] = None,
                  on_threat_update: Optional[Callable] = None,
-                 on_state_change: Optional[Callable] = None):
+                 on_state_change: Optional[Callable] = None,
+                 on_batch_status: Optional[Callable] = None):
         self.config = config
         self.on_threat_add = on_threat_add
         self.on_threat_remove = on_threat_remove
         self.on_threat_update = on_threat_update
         self.on_state_change = on_state_change
+        self.on_batch_status = on_batch_status
         
         # Components
         self.alert_monitor = AlertMonitor(on_alert_change=self._on_alert_change)
@@ -53,6 +55,10 @@ class AutoController:
         self.is_running = False
         self._next_threat_id = 1
         self._tasks: List[asyncio.Task] = []
+        
+        # Message batching (30 sec buffer)
+        self._message_buffer: List[dict] = []
+        self._batch_interval = 30  # seconds
         
         # Region coordinates (approximate centers)
         self.region_coords = {
@@ -203,6 +209,10 @@ class AutoController:
         ttl_task = asyncio.create_task(self._ttl_cleanup_loop())
         self._tasks.append(ttl_task)
         
+        # Start batch processing loop (30 sec)
+        batch_task = asyncio.create_task(self._batch_processing_loop())
+        self._tasks.append(batch_task)
+        
         if self.on_state_change:
             await self.on_state_change({"status": "running", "test_mode": self.config.test_mode})
     
@@ -236,28 +246,20 @@ class AutoController:
             await self._clear_region_threats(region)
     
     async def _on_telegram_message(self, msg_data: dict):
-        """Handle new Telegram message"""
+        """Handle new Telegram message - add to buffer for batch processing"""
         text = msg_data.get("text", "")
         
         # Quick filter first
         if not self.llm.quick_filter(text, self.config.threat_keywords):
             return
         
-        # Process with LLM - now returns list of threats
-        threats = await self.llm.process_message(text)
-        
-        if not threats:
-            return
-        
-        # Process each threat in the message
-        for threat_info in threats:
-            if threat_info.confidence < 0.5:
-                continue
-                
-            if threat_info.action == "add":
-                await self._add_threat(threat_info, msg_data)
-            elif threat_info.action == "remove":
-                await self._handle_removal(threat_info, msg_data)
+        # Add to buffer for batch processing
+        self._message_buffer.append({
+            "text": text,
+            "msg_data": msg_data,
+            "timestamp": datetime.now()
+        })
+        print(f"[AutoController] Message added to buffer. Buffer size: {len(self._message_buffer)}")
     
     async def _on_telegram_reply(self, msg_data: dict):
         """Handle reply message (potential 'minus')"""
@@ -410,6 +412,67 @@ class AutoController:
                 print(f"[AutoController] TTL expired for {threat_type} threat {tid} (TTL={ttl_min}min)")
                 await self._remove_threat(tid)
     
+    async def _batch_processing_loop(self):
+        """Process buffered messages every 30 seconds"""
+        while self.is_running:
+            # Countdown with status updates every second
+            for seconds_left in range(self._batch_interval, 0, -1):
+                if not self.is_running:
+                    break
+                    
+                # Send batch status update
+                if self.on_batch_status:
+                    await self.on_batch_status({
+                        "seconds_left": seconds_left,
+                        "queue_size": len(self._message_buffer)
+                    })
+                
+                await asyncio.sleep(1)
+            
+            if not self.is_running:
+                break
+            
+            if not self._message_buffer:
+                # Send reset even if no messages
+                if self.on_batch_status:
+                    await self.on_batch_status({"reset": True, "queue_size": 0})
+                continue
+            
+            # Take all messages from buffer
+            messages = self._message_buffer.copy()
+            self._message_buffer.clear()
+            
+            print(f"[AutoController] Processing batch of {len(messages)} messages...")
+            
+            # Notify that processing started
+            if self.on_batch_status:
+                await self.on_batch_status({"reset": True, "queue_size": 0})
+            
+            # Combine all texts for batch LLM processing
+            texts = [m["text"] for m in messages]
+            
+            # Process batch with LLM
+            threats = await self.llm.process_batch(texts)
+            
+            if not threats:
+                print("[AutoController] No threats found in batch")
+                continue
+            
+            print(f"[AutoController] Batch returned {len(threats)} threats")
+            
+            # Process each threat
+            for threat_info in threats:
+                if threat_info.confidence < 0.5:
+                    continue
+                
+                # Use first message's msg_data as reference
+                msg_data = messages[0]["msg_data"] if messages else {}
+                
+                if threat_info.action == "add":
+                    await self._add_threat(threat_info, msg_data)
+                elif threat_info.action == "remove":
+                    await self._handle_removal(threat_info, msg_data)
+    
     def _offset_coords(self, lat: float, lng: float, angle_deg: float, distance_km: float) -> tuple:
         """
         Calculate new coordinates offset from a point.
@@ -452,6 +515,11 @@ class AutoController:
         """
         offset_km = 40  # Distance from target for direction-based origins
         
+        # Check if origin is a Ukrainian region (should be ignored)
+        if origin and self._is_ukrainian_region(origin):
+            print(f"[AutoController] Ignoring Ukrainian region as origin: {origin}, using Russia default")
+            return self._offset_coords(target_lat, target_lng, 45, offset_km)
+        
         if origin_type == "city":
             # Geocode the origin city
             coords = await self._get_coords_for_location(origin)
@@ -480,10 +548,9 @@ class AutoController:
             elif "захід" in origin_lower or "запад" in origin_lower or "западн" in origin_lower:
                 return self._offset_coords(target_lat, target_lng, 270, offset_km)
             
-            # Try to geocode the region name
-            coords = await self._get_coords_for_location(origin)
-            if coords:
-                return coords
+            # For other regions, default to Russia
+            print(f"[AutoController] Region without direction: {origin}, using Russia default")
+            return self._offset_coords(target_lat, target_lng, 45, offset_km)
         
         # origin_type == "direction" or fallback
         # If origin is None/empty, default to Russia (northeast = 45°)
@@ -494,6 +561,40 @@ class AutoController:
         # Use direction_to_angle to get angle from cardinal direction
         from_angle = LLMProcessor.direction_to_angle(origin)
         return self._offset_coords(target_lat, target_lng, from_angle, offset_km)
+    
+    def _is_ukrainian_region(self, name: str) -> bool:
+        """Check if name is a Ukrainian region/oblast (should not be used as origin)"""
+        if not name:
+            return False
+        
+        name_lower = name.lower().strip()
+        
+        # Check for -щина suffix (Київщина, Чернігівщина, etc.)
+        if name_lower.endswith("щина"):
+            return True
+        
+        # Check for "область" suffix
+        if "область" in name_lower:
+            return True
+        
+        # Check known Ukrainian oblast names
+        ukrainian_regions = [
+            "київська", "харківська", "одеська", "дніпропетровська", "львівська",
+            "запорізька", "донецька", "луганська", "миколаївська", "полтавська",
+            "чернігівська", "черкаська", "сумська", "херсонська", "вінницька",
+            "житомирська", "хмельницька", "рівненська", "івано-франківська",
+            "тернопільська", "волинська", "закарпатська", "чернівецька", "кіровоградська",
+            # Russian spellings
+            "киевская", "харьковская", "одесская", "днепропетровская", "львовская",
+            "запорожская", "донецкая", "луганская", "николаевская", "полтавская",
+            "черниговская", "черкасская", "сумская", "херсонская", "винницкая"
+        ]
+        
+        for region in ukrainian_regions:
+            if region in name_lower:
+                return True
+        
+        return False
     
     def _heading_to_angle(self, heading: str) -> float:
         """

@@ -80,6 +80,113 @@ class LLMProcessor:
             print(f"[LLM] Error processing message: {e}")
             return []
     
+    async def process_batch(self, texts: list) -> list:
+        """
+        Process multiple messages in a single batch.
+        Combines all texts and asks LLM to deduplicate and return unique threats.
+        
+        Args:
+            texts: List of message texts to analyze together
+            
+        Returns:
+            List of ThreatInfo objects (deduplicated)
+        """
+        if not self.api_key:
+            print("[LLM] No API key configured")
+            return []
+        
+        if not texts:
+            return []
+        
+        # Build batch prompt
+        prompt = self._build_batch_prompt(texts)
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://dronemap.local",
+                    "X-Title": "DroneMap"
+                }
+                
+                payload = {
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": self._get_batch_system_prompt()},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.1,
+                    "max_tokens": 4000
+                }
+                
+                async with session.post(self.api_url, headers=headers, 
+                                        json=payload, timeout=60) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        print(f"[LLM] API error {response.status}: {error_text}")
+                        return []
+                    
+                    result = await response.json()
+                    threats = self._parse_response(result)
+                    print(f"[LLM] Batch processing: {len(texts)} messages -> {len(threats)} unique threats")
+                    return threats
+                    
+        except Exception as e:
+            print(f"[LLM] Error processing batch: {e}")
+            return []
+    
+    def _get_batch_system_prompt(self) -> str:
+        return """Ти аналізуєш КІЛЬКА повідомлень з українських телеграм-каналів про повітряну тривогу.
+Повідомлення можуть бути з РІЗНИХ джерел і описувати ТІ САМІ загрози різними словами.
+
+ВАЖЛИВО:
+1. Об'єднуй дублікати! Якщо кілька повідомлень про одну загрозу - поверни ОДНУ.
+2. Якщо одне повідомлення каже "4 шахеди на Київ", а інше "БПЛА над Києвом" - це ОДНА загроза.
+3. Бери найточніші дані: якщо є кількість - використай її, якщо є напрямок - використай.
+4. Області з суфіксом -щина (Київщина, Полтавщина) - це ЗАГОЛОВКИ, не target! Шукай конкретне місто.
+
+ORIGIN (звідки летить) - ДУЖЕ ВАЖЛИВО:
+- Українські області (Київщина, Чернігівщина, тощо) - це НЕ origin! Це просто заголовки.
+- Origin вказуй ТІЛЬКИ якщо є явна інформація: "з Росії", "з моря", "з Білорусі", "від Києва до X"
+- Якщо немає явного origin - НЕ ВКАЗУЙ origin взагалі (null)
+- "на Васильків", "біля Ріпок" - це target, НЕ origin!
+
+Відповідай ТІЛЬКИ валідним JSON:
+{
+  "threats": [
+    {
+      "action": "add" | "remove",
+      "threat_type": "drone" | "missile" | "ballistic" | "hypersonic" | "nuclear",
+      "count": число,
+      "target": "місто (НЕ область!)",
+      "target_offset": "напрямок від міста (північ/південь/схід/захід) або null",
+      "origin": "звідки летить (ТІЛЬКИ якщо явно вказано!) або null",
+      "origin_type": "city" | "sea" | "direction" | null,
+      "heading": "курс руху (захід/схід/північ/південь) або null"
+    }
+  ]
+}
+
+ТИПИ ЗАГРОЗ:
+- "drone" - БПЛА, шахед, герань, мопед, дрон
+- "missile" - КР, калібр, х-101, крилата ракета
+- "ballistic" - балістика, іскандер
+- "hypersonic" - кінжал, гіперзвук
+- "nuclear" - ядерна
+
+Якщо немає загроз: {"threats": []}"""
+
+    def _build_batch_prompt(self, texts: list) -> str:
+        """Build prompt for batch processing"""
+        numbered = "\n".join([f"{i+1}. \"{t}\"" for i, t in enumerate(texts)])
+        return f"""Проаналізуй ВСІ ці повідомлення РАЗОМ (можуть бути з різних каналів):
+
+{numbered}
+
+Об'єднай дублікати та поверни ФІНАЛЬНИЙ список УНІКАЛЬНИХ загроз.
+Якщо кілька повідомлень про одну загрозу - поверни тільки ОДНУ з найточнішими даними."""
+    
     def _get_system_prompt(self) -> str:
         return """Ти аналізуєш повідомлення з українських телеграм-каналів про повітряну тривогу та загрози.
 Твоя задача - витягти ВСІ загрози з повідомлення (може бути кілька).
