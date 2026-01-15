@@ -933,6 +933,12 @@ async function loadStateFromServer() {
             state.auto_threats.forEach(t => {
                 t.isAuto = true;
                 threats.push(t);
+                // Add to feed
+                addFeedItem({
+                    type: t.type,
+                    target: t.region,
+                    count: t.count
+                });
             });
         }
         
