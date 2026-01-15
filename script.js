@@ -141,7 +141,7 @@ async function loadRegions() {
                     color: isAlert ? '#ef4444' : '#374151',
                     weight: isAlert ? 2 : 1,
                     fillColor: isAlert ? '#ef4444' : 'transparent',
-                    fillOpacity: isAlert ? 0.15 : 0
+                    fillOpacity: isAlert ? 0.3 : 0
                 };
             },
             onEachFeature: (feature, layer) => {
@@ -1027,7 +1027,7 @@ function updateAlertRegions() {
             color: isAlert ? '#374151a8' : '#374151a8',
             weight: isAlert ? 2 : 1,
             fillColor: isAlert ? '#ef4444' : 'transparent',
-            fillOpacity: isAlert ? 0.025 : 0,
+            fillOpacity: isAlert ? 0.03 : 0,
             
         });
     });
