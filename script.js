@@ -1239,7 +1239,9 @@ function addFeedItem(data) {
         'drone': 'БПЛА',
         'missile': 'КР',
         'ballistic': 'Баліст.',
-        'hypersonic': 'Гіперзвук'
+        'hypersonic': 'Гіперзвук',
+        'ballistic_alert': '⚠️ БАЛІСТИКА',
+        'ballistic_cancel': '✅ ВІДБІЙ'
     };
     
     const typeLabel = typeLabels[data.type] || data.type;
@@ -1275,6 +1277,12 @@ function handleFeedUpdate(data) {
 }
 
 function addAutoThreat(data) {
+    // Handle ballistic alert separately
+    if (data.type === 'ballistic_alert') {
+        showBallisticAlert(data);
+        return;
+    }
+    
     // Check if threat already exists
     if (threats.find(t => t.id === data.id)) {
         return;
@@ -1300,7 +1308,60 @@ function addAutoThreat(data) {
     showAutoNotification(`+ ${data.type === 'missile' ? 'Ракета' : 'БПЛА'} (${data.region || 'Невідомо'})`);
 }
 
+// Ballistic alert marker reference
+let ballisticAlertMarker = null;
+let ballisticAlertTimeout = null;
+
+function showBallisticAlert(data) {
+    // Remove existing alert if any
+    if (ballisticAlertMarker) {
+        map.removeLayer(ballisticAlertMarker);
+    }
+    if (ballisticAlertTimeout) {
+        clearTimeout(ballisticAlertTimeout);
+    }
+    
+    // Create alert marker with custom icon
+    const alertIcon = L.divIcon({
+        className: 'ballistic-alert-marker',
+        html: `<div class="ballistic-alert-icon">
+            <img src="icons/ballistic_alert.svg" alt="Ballistic Alert">
+        </div>`,
+        iconSize: [80, 80],
+        iconAnchor: [40, 40]
+    });
+    
+    ballisticAlertMarker = L.marker([data.lat, data.lng], {
+        icon: alertIcon,
+        zIndexOffset: 2000
+    }).addTo(map);
+    
+    // Auto-remove after 10 minutes
+    ballisticAlertTimeout = setTimeout(() => {
+        if (ballisticAlertMarker) {
+            map.removeLayer(ballisticAlertMarker);
+            ballisticAlertMarker = null;
+        }
+    }, 600000);
+    
+    console.log('[Alert] Ballistic alert shown at', data.lat, data.lng);
+}
+
 function removeAutoThreat(id) {
+    // Handle ballistic alert removal
+    if (id === 'ballistic_alert') {
+        if (ballisticAlertMarker) {
+            map.removeLayer(ballisticAlertMarker);
+            ballisticAlertMarker = null;
+        }
+        if (ballisticAlertTimeout) {
+            clearTimeout(ballisticAlertTimeout);
+            ballisticAlertTimeout = null;
+        }
+        console.log('[Alert] Ballistic alert removed');
+        return;
+    }
+    
     const threat = threats.find(t => t.id === id);
     if (!threat) return;
     

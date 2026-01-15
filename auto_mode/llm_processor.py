@@ -171,9 +171,11 @@ ORIGIN (звідки летить) - ДУЖЕ ВАЖЛИВО:
 ТИПИ ЗАГРОЗ:
 - "drone" - БПЛА, шахед, герань, мопед, дрон
 - "missile" - КР, калібр, х-101, крилата ракета
-- "ballistic" - балістика, іскандер
+- "ballistic" - балістика, іскандер, "Цель на...", "Ціль на...", КАБ
 - "hypersonic" - кінжал, гіперзвук
 - "nuclear" - ядерна
+
+ВАЖЛИВО: "Цель на X" або "Ціль на X" - це ЗАВЖДИ ballistic, НЕ missile!
 
 Якщо немає загроз: {"threats": []}"""
 
@@ -242,6 +244,9 @@ ORIGIN (звідки летить) - ДУЖЕ ВАЖЛИВО:
 {"threats": [{"action": "add", "threat_type": "drone", "count": 2, "target": "Кривий Ріг", "origin": "Росія", "origin_type": "direction"}]}
 
 10. "балістика на Харків" - ВАЖЛИВО: ВСІ загрози БЕЗ уточнення напрямку завжди летять з РОСІЇ (північний схід):
+{"threats": [{"action": "add", "threat_type": "ballistic", "count": 1, "target": "Харків", "origin": "Росія", "origin_type": "direction"}]}
+
+10a. "Цель на Харків" або "Ціль на Полтаву" - ВАЖЛИВО: "Цель/Ціль на X" це ЗАВЖДИ ballistic!
 {"threats": [{"action": "add", "threat_type": "ballistic", "count": 1, "target": "Харків", "origin": "Росія", "origin_type": "direction"}]}
 
 11. "КР на Київ":

@@ -995,3 +995,47 @@ body.view-mode .threat-feed {
         transform: translateY(0);
     }
 }
+
+/* Ballistic Alert Marker */
+.ballistic-alert-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.ballistic-alert-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: ballisticPulse 1s ease-in-out infinite;
+}
+
+.ballistic-alert-icon img {
+    width: 70px;
+    height: 70px;
+    filter: brightness(0) saturate(100%) invert(20%) sepia(98%) saturate(4644%) hue-rotate(351deg) brightness(95%) contrast(120%) drop-shadow(0 0 20px rgba(220, 38, 38, 0.8));
+}
+
+@keyframes ballisticPulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px rgba(220, 38, 38, 0.9));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 25px rgba(220, 38, 38, 1));
+    }
+}
+
+.threat-feed-item .feed-type.ballistic_alert {
+    background: rgba(220, 38, 38, 0.4);
+    color: #ef4444;
+    font-weight: 700;
+}
+
+.threat-feed-item .feed-type.ballistic_cancel {
+    background: rgba(34, 197, 94, 0.4);
+    color: #22c55e;
+    font-weight: 700;
+}

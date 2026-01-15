@@ -251,6 +251,16 @@ class AutoController:
         """Handle new Telegram message - add to buffer for batch processing"""
         text = msg_data.get("text", "")
         
+        # Check for ballistic alert cancel (immediate)
+        if self._is_ballistic_alert_cancel(text):
+            await self._handle_ballistic_alert_cancel()
+            return
+        
+        # Check for ballistic alert (immediate, no LLM needed)
+        if self._is_ballistic_alert(text):
+            await self._handle_ballistic_alert()
+            return
+        
         # Quick filter first
         if not self.llm.quick_filter(text, self.config.threat_keywords):
             return
@@ -262,6 +272,81 @@ class AutoController:
             "timestamp": datetime.now()
         })
         print(f"[AutoController] Message added to buffer. Buffer size: {len(self._message_buffer)}")
+    
+    def _is_ballistic_alert(self, text: str) -> bool:
+        """Check if message is a ballistic threat alert"""
+        if not text:
+            return False
+        text_lower = text.lower()
+        ballistic_keywords = [
+            "балістична загроза",
+            "загроза балістики", 
+            "угроза балистики",
+            "баллистическая угроза",
+            "загроза балістики"
+        ]
+        return any(kw in text_lower for kw in ballistic_keywords)
+    
+    def _is_ballistic_alert_cancel(self, text: str) -> bool:
+        """Check if message is a ballistic alert cancellation"""
+        if not text:
+            return False
+        text_lower = text.lower()
+        cancel_keywords = [
+            "відбій по балістиці",
+            "відбій балістики",
+            "отбой балистики",
+            "отбой по балистике"
+        ]
+        return any(kw in text_lower for kw in cancel_keywords)
+    
+    async def _handle_ballistic_alert_cancel(self):
+        """Handle ballistic alert cancellation"""
+        print("[AutoController] ✅ Ballistic alert CANCELLED")
+        
+        # Send cancel to frontend
+        if self.on_threat_remove:
+            await self.on_threat_remove({"id": "ballistic_alert"})
+        
+        # Send to feed
+        if self.on_llm_result:
+            await self.on_llm_result({
+                "type": "ballistic_cancel",
+                "target": "Відбій балістики",
+                "count": 1,
+                "action": "cancel"
+            })
+    
+    async def _handle_ballistic_alert(self):
+        """Handle ballistic threat alert - show marker and notify feed"""
+        print("[AutoController] ⚠️ BALLISTIC ALERT detected!")
+        
+        # Fixed position for ballistic alert marker (Kursk region, Russia)
+        alert_lat = 51.7
+        alert_lng = 36.2
+        
+        # Send to feed
+        if self.on_llm_result:
+            await self.on_llm_result({
+                "type": "ballistic_alert",
+                "target": "Загроза балістики",
+                "count": 1,
+                "action": "alert"
+            })
+        
+        # Send marker to frontend
+        if self.on_threat_add:
+            await self.on_threat_add({
+                "id": "ballistic_alert",
+                "type": "ballistic_alert",
+                "lat": alert_lat,
+                "lng": alert_lng,
+                "angle": 0,
+                "count": 1,
+                "region": "Загроза балістики",
+                "trajectoryLength": 0,
+                "isAlert": True
+            })
     
     async def _on_telegram_reply(self, msg_data: dict):
         """Handle reply message (potential 'minus')"""
