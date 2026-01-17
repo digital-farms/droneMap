@@ -62,6 +62,11 @@ class AutoController:
         self.ballistic_alert_active = False
         self.ballistic_alert_time: Optional[datetime] = None
         
+        # Flight alert state (aircraft takeoff)
+        self.flight_alert_active = False
+        self.flight_alert_time: Optional[datetime] = None
+        self.flight_alert_aircraft: Optional[str] = None
+        
         # Feed history (4 hours or 200 messages max)
         self.feed_history: List[dict] = []
         self._feed_max_items = 200
@@ -270,6 +275,17 @@ class AutoController:
             await self._handle_ballistic_alert()
             return
         
+        # Check for flight alert cancel (immediate)
+        if self._is_flight_alert_cancel(text):
+            await self._handle_flight_alert_cancel()
+            return
+        
+        # Check for flight alert (immediate, no LLM needed)
+        is_flight, aircraft = self._is_flight_alert(text)
+        if is_flight:
+            await self._handle_flight_alert(aircraft)
+            return
+        
         # Quick filter first
         if not self.llm.quick_filter(text, self.config.threat_keywords):
             return
@@ -308,6 +324,48 @@ class AutoController:
             "отбой баллистики",
             "отбой балистики",
             "отбой по балистике"
+        ]
+        return any(kw in text_lower for kw in cancel_keywords)
+    
+    def _is_flight_alert(self, text: str) -> tuple:
+        """Check if message is an aircraft takeoff alert. Returns (is_alert, aircraft_type)"""
+        if not text:
+            return False, None
+        text_lower = text.lower()
+        
+        # Aircraft types to detect
+        aircraft_types = [
+            "ту-95мс", "ту-95", "ту-160", "ту-22м3",
+            "миг-31к", "миг-31", "миг-29",
+            "су-27", "су-27см", "су-27м", "су-25", "су-30м2", "су-34"
+        ]
+        
+        # Takeoff keywords
+        takeoff_keywords = ["взлет", "взліт", "підйом", "подъем", "зліт"]
+        
+        # Check if it's a takeoff message
+        has_takeoff = any(kw in text_lower for kw in takeoff_keywords)
+        if not has_takeoff:
+            return False, None
+        
+        # Find which aircraft
+        for aircraft in aircraft_types:
+            if aircraft in text_lower:
+                return True, aircraft.upper()
+        
+        return False, None
+    
+    def _is_flight_alert_cancel(self, text: str) -> bool:
+        """Check if message is a flight alert cancellation"""
+        if not text:
+            return False
+        text_lower = text.lower()
+        cancel_keywords = [
+            "відбій по авіації",
+            "відбій авіації", 
+            "отбой по авиации",
+            "отбой авиации",
+            "посадка"
         ]
         return any(kw in text_lower for kw in cancel_keywords)
     
@@ -369,6 +427,70 @@ class AutoController:
                 "angle": 0,
                 "count": 1,
                 "region": "Загроза балістики",
+                "trajectoryLength": 0,
+                "isAlert": True
+            })
+    
+    async def _handle_flight_alert_cancel(self):
+        """Handle flight alert cancellation"""
+        print("[AutoController] ✅ Flight alert CANCELLED")
+        
+        # Update state
+        self.flight_alert_active = False
+        self.flight_alert_time = None
+        self.flight_alert_aircraft = None
+        
+        # Send cancel to frontend
+        if self.on_threat_remove:
+            await self.on_threat_remove({"id": "flight_alert"})
+        
+        # Send to feed and save to history
+        feed_item = {
+            "type": "flight_cancel",
+            "target": "Відбій по авіації",
+            "count": 1,
+            "action": "cancel",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.add_to_feed_history(feed_item)
+        if self.on_llm_result:
+            await self.on_llm_result(feed_item)
+    
+    async def _handle_flight_alert(self, aircraft: str):
+        """Handle aircraft takeoff alert - show marker and notify feed"""
+        print(f"[AutoController] ✈️ FLIGHT ALERT detected! Aircraft: {aircraft}")
+        
+        # Update state
+        self.flight_alert_active = True
+        self.flight_alert_time = datetime.now()
+        self.flight_alert_aircraft = aircraft
+        
+        # Fixed position for flight alert marker (offset east from ballistic)
+        alert_lat = 51.7
+        alert_lng = 38.5
+        
+        # Send to feed and save to history
+        feed_item = {
+            "type": "flight_alert",
+            "target": f"Взліт {aircraft}",
+            "count": 1,
+            "action": "alert",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.add_to_feed_history(feed_item)
+        if self.on_llm_result:
+            await self.on_llm_result(feed_item)
+        
+        # Send marker to frontend
+        if self.on_threat_add:
+            await self.on_threat_add({
+                "id": "flight_alert",
+                "type": "flight_alert",
+                "lat": alert_lat,
+                "lng": alert_lng,
+                "angle": 0,
+                "count": 1,
+                "region": f"Взліт {aircraft}",
                 "trajectoryLength": 0,
                 "isAlert": True
             })
@@ -852,7 +974,8 @@ class AutoController:
             "active_alerts": list(self.active_alerts),
             "threat_count": len(self.threats),
             "monitored_channels": self.config.get_channels_to_monitor(),
-            "ballistic_alert": self.get_ballistic_alert_state()
+            "ballistic_alert": self.get_ballistic_alert_state(),
+            "flight_alert": self.get_flight_alert_state()
         }
     
     def get_ballistic_alert_state(self) -> Optional[dict]:
@@ -873,6 +996,28 @@ class AutoController:
             "lat": 51.7,
             "lng": 36.2,
             "time": self.ballistic_alert_time.isoformat() if self.ballistic_alert_time else None
+        }
+    
+    def get_flight_alert_state(self) -> Optional[dict]:
+        """Get current flight alert state if active"""
+        if not self.flight_alert_active:
+            return None
+        
+        # Check if alert should auto-expire (1 hour)
+        if self.flight_alert_time:
+            elapsed = (datetime.now() - self.flight_alert_time).total_seconds()
+            if elapsed > 3600:  # 1 hour
+                self.flight_alert_active = False
+                self.flight_alert_time = None
+                self.flight_alert_aircraft = None
+                return None
+        
+        return {
+            "active": True,
+            "lat": 51.7,
+            "lng": 38.5,
+            "aircraft": self.flight_alert_aircraft,
+            "time": self.flight_alert_time.isoformat() if self.flight_alert_time else None
         }
     
     def add_to_feed_history(self, item: dict):

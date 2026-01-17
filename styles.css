@@ -1039,3 +1039,47 @@ body.view-mode .threat-feed {
     color: #22c55e;
     font-weight: 700;
 }
+
+/* Flight Alert Marker */
+.flight-alert-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.flight-alert-icon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: flightPulse 1.5s ease-in-out infinite;
+}
+
+.flight-alert-icon img {
+    width: 70px;
+    height: 70px;
+    filter: brightness(0) saturate(100%) invert(55%) sepia(60%) saturate(600%) hue-rotate(230deg) brightness(100%) contrast(100%) drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+}
+
+@keyframes flightPulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.9));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 25px rgba(168, 85, 247, 1));
+    }
+}
+
+.threat-feed-item .feed-type.flight_alert {
+    background: rgba(168, 85, 247, 0.4);
+    color: #a855f7;
+    font-weight: 700;
+}
+
+.threat-feed-item .feed-type.flight_cancel {
+    background: rgba(34, 197, 94, 0.4);
+    color: #22c55e;
+    font-weight: 700;
+}

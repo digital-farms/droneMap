@@ -1140,6 +1140,15 @@ function handleWebSocketMessage(msg) {
                 });
                 console.log('[Init] Loaded active ballistic alert');
             }
+            // Load flight alert if active
+            if (msg.data.status && msg.data.status.flight_alert) {
+                const alert = msg.data.status.flight_alert;
+                showFlightAlert({
+                    lat: alert.lat,
+                    lng: alert.lng
+                });
+                console.log('[Init] Loaded active flight alert:', alert.aircraft);
+            }
             // Load feed history
             if (msg.data.feed_history && Array.isArray(msg.data.feed_history)) {
                 console.log('[Init] Loading feed history:', msg.data.feed_history.length, 'items');
@@ -1260,7 +1269,9 @@ function addFeedItem(data, prepend = false) {
         'ballistic': 'Баліст.',
         'hypersonic': 'Гіперзвук',
         'ballistic_alert': '⚠️ БАЛІСТИКА',
-        'ballistic_cancel': '✅ ВІДБІЙ'
+        'ballistic_cancel': '✅ ВІДБІЙ',
+        'flight_alert': '✈️ ЗЛІТ',
+        'flight_cancel': '✅ ВІДБІЙ'
     };
     
     const typeLabel = typeLabels[data.type] || data.type;
@@ -1309,6 +1320,12 @@ function addAutoThreat(data) {
         return;
     }
     
+    // Handle flight alert separately
+    if (data.type === 'flight_alert') {
+        showFlightAlert(data);
+        return;
+    }
+    
     // Check if threat already exists
     if (threats.find(t => t.id === data.id)) {
         return;
@@ -1337,6 +1354,10 @@ function addAutoThreat(data) {
 // Ballistic alert marker reference
 let ballisticAlertMarker = null;
 let ballisticAlertTimeout = null;
+
+// Flight alert marker reference
+let flightAlertMarker = null;
+let flightAlertTimeout = null;
 
 function showBallisticAlert(data) {
     // Remove existing alert if any
@@ -1373,6 +1394,41 @@ function showBallisticAlert(data) {
     console.log('[Alert] Ballistic alert shown at', data.lat, data.lng);
 }
 
+function showFlightAlert(data) {
+    // Remove existing alert if any
+    if (flightAlertMarker) {
+        map.removeLayer(flightAlertMarker);
+    }
+    if (flightAlertTimeout) {
+        clearTimeout(flightAlertTimeout);
+    }
+    
+    // Create alert marker with custom icon
+    const alertIcon = L.divIcon({
+        className: 'flight-alert-marker',
+        html: `<div class="flight-alert-icon">
+            <img src="icons/flight_alert.svg" alt="Flight Alert">
+        </div>`,
+        iconSize: [80, 80],
+        iconAnchor: [40, 40]
+    });
+    
+    flightAlertMarker = L.marker([data.lat, data.lng], {
+        icon: alertIcon,
+        zIndexOffset: 2000
+    }).addTo(map);
+    
+    // Auto-remove after 1 hour
+    flightAlertTimeout = setTimeout(() => {
+        if (flightAlertMarker) {
+            map.removeLayer(flightAlertMarker);
+            flightAlertMarker = null;
+        }
+    }, 3600000);
+    
+    console.log('[Alert] Flight alert shown at', data.lat, data.lng);
+}
+
 function removeAutoThreat(id) {
     // Handle ballistic alert removal
     if (id === 'ballistic_alert') {
@@ -1385,6 +1441,20 @@ function removeAutoThreat(id) {
             ballisticAlertTimeout = null;
         }
         console.log('[Alert] Ballistic alert removed');
+        return;
+    }
+    
+    // Handle flight alert removal
+    if (id === 'flight_alert') {
+        if (flightAlertMarker) {
+            map.removeLayer(flightAlertMarker);
+            flightAlertMarker = null;
+        }
+        if (flightAlertTimeout) {
+            clearTimeout(flightAlertTimeout);
+            flightAlertTimeout = null;
+        }
+        console.log('[Alert] Flight alert removed');
         return;
     }
     
