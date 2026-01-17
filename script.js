@@ -1131,6 +1131,15 @@ function handleWebSocketMessage(msg) {
                 autoModeEnabled = msg.data.auto_mode;
                 updateAutoModeUI();
             }
+            // Load ballistic alert if active
+            if (msg.data.status && msg.data.status.ballistic_alert) {
+                const alert = msg.data.status.ballistic_alert;
+                showBallisticAlert({
+                    lat: alert.lat,
+                    lng: alert.lng
+                });
+                console.log('[Init] Loaded active ballistic alert');
+            }
             break;
             
         case 'threat_add':

@@ -58,6 +58,10 @@ class AutoController:
         self._next_threat_id = 1
         self._tasks: List[asyncio.Task] = []
         
+        # Ballistic alert state
+        self.ballistic_alert_active = False
+        self.ballistic_alert_time: Optional[datetime] = None
+        
         # Message batching (30 sec buffer)
         self._message_buffer: List[dict] = []
         self._batch_interval = 30  # seconds
@@ -280,6 +284,7 @@ class AutoController:
         text_lower = text.lower()
         ballistic_keywords = [
             "балістична загроза",
+            "угроза баллистики",
             "загроза балістики", 
             "угроза балистики",
             "баллистическая угроза",
@@ -295,6 +300,7 @@ class AutoController:
         cancel_keywords = [
             "відбій по балістиці",
             "відбій балістики",
+            "отбой баллистики",
             "отбой балистики",
             "отбой по балистике"
         ]
@@ -303,6 +309,10 @@ class AutoController:
     async def _handle_ballistic_alert_cancel(self):
         """Handle ballistic alert cancellation"""
         print("[AutoController] ✅ Ballistic alert CANCELLED")
+        
+        # Update state
+        self.ballistic_alert_active = False
+        self.ballistic_alert_time = None
         
         # Send cancel to frontend
         if self.on_threat_remove:
@@ -320,6 +330,10 @@ class AutoController:
     async def _handle_ballistic_alert(self):
         """Handle ballistic threat alert - show marker and notify feed"""
         print("[AutoController] ⚠️ BALLISTIC ALERT detected!")
+        
+        # Update state
+        self.ballistic_alert_active = True
+        self.ballistic_alert_time = datetime.now()
         
         # Fixed position for ballistic alert marker (Kursk region, Russia)
         alert_lat = 51.7
@@ -823,5 +837,26 @@ class AutoController:
             "test_mode": self.config.test_mode,
             "active_alerts": list(self.active_alerts),
             "threat_count": len(self.threats),
-            "monitored_channels": self.config.get_channels_to_monitor()
+            "monitored_channels": self.config.get_channels_to_monitor(),
+            "ballistic_alert": self.get_ballistic_alert_state()
+        }
+    
+    def get_ballistic_alert_state(self) -> Optional[dict]:
+        """Get current ballistic alert state if active"""
+        if not self.ballistic_alert_active:
+            return None
+        
+        # Check if alert should auto-expire (10 minutes)
+        if self.ballistic_alert_time:
+            elapsed = (datetime.now() - self.ballistic_alert_time).total_seconds()
+            if elapsed > 600:  # 10 minutes
+                self.ballistic_alert_active = False
+                self.ballistic_alert_time = None
+                return None
+        
+        return {
+            "active": True,
+            "lat": 51.7,
+            "lng": 36.2,
+            "time": self.ballistic_alert_time.isoformat() if self.ballistic_alert_time else None
         }
