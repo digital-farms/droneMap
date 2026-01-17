@@ -62,6 +62,11 @@ class AutoController:
         self.ballistic_alert_active = False
         self.ballistic_alert_time: Optional[datetime] = None
         
+        # Feed history (4 hours or 200 messages max)
+        self.feed_history: List[dict] = []
+        self._feed_max_items = 200
+        self._feed_max_age_hours = 4
+        
         # Message batching (30 sec buffer)
         self._message_buffer: List[dict] = []
         self._batch_interval = 30  # seconds
@@ -318,14 +323,17 @@ class AutoController:
         if self.on_threat_remove:
             await self.on_threat_remove({"id": "ballistic_alert"})
         
-        # Send to feed
+        # Send to feed and save to history
+        feed_item = {
+            "type": "ballistic_cancel",
+            "target": "Відбій балістики",
+            "count": 1,
+            "action": "cancel",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.add_to_feed_history(feed_item)
         if self.on_llm_result:
-            await self.on_llm_result({
-                "type": "ballistic_cancel",
-                "target": "Відбій балістики",
-                "count": 1,
-                "action": "cancel"
-            })
+            await self.on_llm_result(feed_item)
     
     async def _handle_ballistic_alert(self):
         """Handle ballistic threat alert - show marker and notify feed"""
@@ -339,14 +347,17 @@ class AutoController:
         alert_lat = 51.7
         alert_lng = 36.2
         
-        # Send to feed
+        # Send to feed and save to history
+        feed_item = {
+            "type": "ballistic_alert",
+            "target": "Загроза балістики",
+            "count": 1,
+            "action": "alert",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.add_to_feed_history(feed_item)
         if self.on_llm_result:
-            await self.on_llm_result({
-                "type": "ballistic_alert",
-                "target": "Загроза балістики",
-                "count": 1,
-                "action": "alert"
-            })
+            await self.on_llm_result(feed_item)
         
         # Send marker to frontend
         if self.on_threat_add:
@@ -566,14 +577,17 @@ class AutoController:
                 if threat_info.confidence < 0.5:
                     continue
                 
-                # Send to feed
+                # Send to feed and save to history
+                feed_item = {
+                    "type": threat_info.threat_type or "drone",
+                    "target": threat_info.target,
+                    "count": threat_info.count,
+                    "action": threat_info.action,
+                    "timestamp": datetime.now().isoformat()
+                }
+                self.add_to_feed_history(feed_item)
                 if self.on_llm_result:
-                    await self.on_llm_result({
-                        "type": threat_info.threat_type or "drone",
-                        "target": threat_info.target,
-                        "count": threat_info.count,
-                        "action": threat_info.action
-                    })
+                    await self.on_llm_result(feed_item)
                 
                 # Use first message's msg_data as reference
                 msg_data = messages[0]["msg_data"] if messages else {}
@@ -860,3 +874,34 @@ class AutoController:
             "lng": 36.2,
             "time": self.ballistic_alert_time.isoformat() if self.ballistic_alert_time else None
         }
+    
+    def add_to_feed_history(self, item: dict):
+        """Add item to feed history with timestamp"""
+        # Add timestamp if not present
+        if "timestamp" not in item:
+            item["timestamp"] = datetime.now().isoformat()
+        
+        self.feed_history.append(item)
+        
+        # Cleanup: remove old items (> 4 hours) and limit to max items
+        self._cleanup_feed_history()
+    
+    def _cleanup_feed_history(self):
+        """Remove old feed items"""
+        now = datetime.now()
+        cutoff = now - timedelta(hours=self._feed_max_age_hours)
+        
+        # Filter by age
+        self.feed_history = [
+            item for item in self.feed_history
+            if datetime.fromisoformat(item["timestamp"]) > cutoff
+        ]
+        
+        # Limit to max items (keep newest)
+        if len(self.feed_history) > self._feed_max_items:
+            self.feed_history = self.feed_history[-self._feed_max_items:]
+    
+    def get_feed_history(self) -> List[dict]:
+        """Get feed history for new clients"""
+        self._cleanup_feed_history()
+        return self.feed_history.copy()

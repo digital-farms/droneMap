@@ -204,7 +204,8 @@ async def websocket_endpoint(websocket: WebSocket):
             "data": {
                 "auto_mode": auto_mode_enabled,
                 "threats": [t.dict() for t in current_state.threats],
-                "status": auto_controller.get_status() if auto_controller else None
+                "status": auto_controller.get_status() if auto_controller else None,
+                "feed_history": auto_controller.get_feed_history() if auto_controller else []
             }
         }))
         

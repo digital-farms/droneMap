@@ -1140,6 +1140,15 @@ function handleWebSocketMessage(msg) {
                 });
                 console.log('[Init] Loaded active ballistic alert');
             }
+            // Load feed history
+            if (msg.data.feed_history && Array.isArray(msg.data.feed_history)) {
+                console.log('[Init] Loading feed history:', msg.data.feed_history.length, 'items');
+                // Clear existing feed first
+                const feed = document.getElementById('threat-feed');
+                if (feed) feed.innerHTML = '';
+                // Add items in order (oldest first)
+                msg.data.feed_history.forEach(item => addFeedItem(item));
+            }
             break;
             
         case 'threat_add':
@@ -1233,16 +1242,17 @@ if (isViewMode) {
 // Threat Feed functionality
 const MAX_FEED_ITEMS = 50;
 
-function addFeedItem(data) {
+function addFeedItem(data, prepend = false) {
     const feed = document.getElementById('threat-feed');
     if (!feed) return;
     
     const item = document.createElement('div');
     item.className = 'threat-feed-item';
     
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-    const dateStr = now.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
+    // Use timestamp from data if available, otherwise current time
+    const eventTime = data.timestamp ? new Date(data.timestamp) : new Date();
+    const timeStr = eventTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = eventTime.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' });
     
     const typeLabels = {
         'drone': 'БПЛА',
@@ -1265,15 +1275,22 @@ function addFeedItem(data) {
         </div>
     `;
     
-    // Add to bottom of feed
-    feed.appendChild(item);
-    
-    // Auto-scroll to bottom (newest)
-    feed.scrollTop = feed.scrollHeight;
+    // Add to feed
+    if (prepend) {
+        feed.insertBefore(item, feed.firstChild);
+    } else {
+        feed.appendChild(item);
+        // Auto-scroll to bottom (newest) only for new items
+        feed.scrollTop = feed.scrollHeight;
+    }
     
     // Limit items
     while (feed.children.length > MAX_FEED_ITEMS) {
-        feed.removeChild(feed.firstChild);
+        if (prepend) {
+            feed.removeChild(feed.lastChild);
+        } else {
+            feed.removeChild(feed.firstChild);
+        }
     }
 }
 
