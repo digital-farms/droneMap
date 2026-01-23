@@ -1347,6 +1347,16 @@ function addFeedItem(data, prepend = false) {
     const item = document.createElement('div');
     item.className = 'threat-feed-item';
     
+    // Store coordinates for click navigation
+    if (data.lat && data.lng) {
+        item.dataset.lat = data.lat;
+        item.dataset.lng = data.lng;
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+            map.flyTo([data.lat, data.lng], 10, { duration: 0.5 });
+        });
+    }
+    
     // Use timestamp from data if available, otherwise current time
     const eventTime = data.timestamp ? new Date(data.timestamp) : new Date();
     const timeStr = eventTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });

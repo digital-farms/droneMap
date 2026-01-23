@@ -526,19 +526,19 @@ class AutoController:
                 if threat_info.target:
                     await self._clear_region_threats(threat_info.target)
     
-    async def _add_threat(self, info: ThreatInfo, msg_data: dict):
-        """Add a new threat to the map using origin -> target logic"""
+    async def _add_threat(self, info: ThreatInfo, msg_data: dict) -> tuple:
+        """Add a new threat to the map using origin -> target logic. Returns (lat, lng) or None."""
         target_name = info.target or self._guess_region_from_channel(msg_data.get("channel", ""))
         
         if not target_name:
             print(f"[AutoController] Cannot determine target for threat")
-            return
+            return None
         
         # Get TARGET coordinates (where threat is or heading to)
         target_coords = await self._get_coords_for_location(target_name)
         if not target_coords:
             print(f"[AutoController] Cannot geocode target: {target_name}")
-            return
+            return None
         target_lat, target_lng = target_coords
         
         # Apply target_offset if specified (e.g., "севернее Киева")
@@ -598,6 +598,8 @@ class AutoController:
         
         if self.on_threat_add:
             await self.on_threat_add(self._threat_to_dict(threat))
+        
+        return (marker_lat, marker_lng)
     
     async def _remove_threat(self, threat_id: int):
         """Remove a specific threat"""
@@ -699,7 +701,17 @@ class AutoController:
                 if threat_info.confidence < 0.5:
                     continue
                 
-                # Send to feed and save to history
+                # Use first message's msg_data as reference
+                msg_data = messages[0]["msg_data"] if messages else {}
+                
+                # Process threat and get coordinates
+                coords = None
+                if threat_info.action == "add":
+                    coords = await self._add_threat(threat_info, msg_data)
+                elif threat_info.action == "remove":
+                    await self._handle_removal(threat_info, msg_data)
+                
+                # Send to feed and save to history (with coordinates if available)
                 feed_item = {
                     "type": threat_info.threat_type or "drone",
                     "target": threat_info.target,
@@ -707,17 +719,13 @@ class AutoController:
                     "action": threat_info.action,
                     "timestamp": datetime.now().isoformat()
                 }
+                if coords:
+                    feed_item["lat"] = coords[0]
+                    feed_item["lng"] = coords[1]
+                
                 self.add_to_feed_history(feed_item)
                 if self.on_llm_result:
                     await self.on_llm_result(feed_item)
-                
-                # Use first message's msg_data as reference
-                msg_data = messages[0]["msg_data"] if messages else {}
-                
-                if threat_info.action == "add":
-                    await self._add_threat(threat_info, msg_data)
-                elif threat_info.action == "remove":
-                    await self._handle_removal(threat_info, msg_data)
     
     def _offset_coords(self, lat: float, lng: float, angle_deg: float, distance_km: float) -> tuple:
         """

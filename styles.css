@@ -932,6 +932,11 @@ body.view-mode .threat-feed {
     min-width: 200px;
     max-width: 300px;
     animation: feedItemAppear 0.3s ease-out;
+    cursor: pointer;
+}
+
+.threat-feed-item:active {
+    background: rgba(30, 35, 50, 0.9);
 }
 
 .threat-feed-item .feed-time {
