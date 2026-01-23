@@ -60,7 +60,9 @@ class AutoModeConfig:
         # Ядерная
         "ядерн", "орешник",
         # Общие
-        "курс", "напрямок", "входить", "рухається", "летить"
+        "курс", "напрямок", "входить", "рухається", "летить",
+        # Patterns for short messages like "2 на Житомир" (implied drones)
+        " на ", "щина:", "область:"
     ])
     
     removal_keywords: List[str] = field(default_factory=lambda: [

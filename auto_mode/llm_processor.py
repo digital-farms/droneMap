@@ -22,7 +22,7 @@ class LLMProcessor:
     to extract threat information.
     """
     
-    def __init__(self, api_key: str, model: str = "anthropic/claude-3-haiku"):
+    def __init__(self, api_key: str, model: str = "anthropic/claude-3.5-haiku"):
         self.api_key = api_key
         self.model = model
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
@@ -288,6 +288,18 @@ ORIGIN (звідки летить) - ДУЖЕ ВАЖЛИВО:
 
 21. Назви областей з суфіксом -щина (Київщина, Чернігівщина, Полтавщина, Харківщина) - це ЗАГОЛОВКИ, не target!
 Шукай КОНКРЕТНЕ місто після заголовку: Васильків, Ріпки, Томаківка, Бориспіль і т.д.
+
+22. ВАЖЛИВО! Якщо тип загрози НЕ ВКАЗАНО (просто "2 на Житомир", "1 на Київ") - це ЗАВЖДИ drone!
+"Житомирщина:
+2 на Житомир
+1 на Коростишів
+Київщина:
+1 на Іванків"
+{"threats": [
+  {"action": "add", "threat_type": "drone", "count": 2, "target": "Житомир", "origin": "Росія", "origin_type": "direction"},
+  {"action": "add", "threat_type": "drone", "count": 1, "target": "Коростишів", "origin": "Росія", "origin_type": "direction"},
+  {"action": "add", "threat_type": "drone", "count": 1, "target": "Іванків", "origin": "Росія", "origin_type": "direction"}
+]}
 
 ТИПИ ЗАГРОЗ:
 - "drone" - БПЛА, шахед, герань, мопед, дрон, безпілотник
