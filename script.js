@@ -19,6 +19,7 @@ const DEFAULT_TRAJECTORY_LENGTH = 100; // km
 let autoModeEnabled = false;
 let wsConnection = null;
 let wsReconnectTimer = null;
+let arcTimerInterval = null;
 
 // Check if we're in view mode (for screenshots)
 const urlParams = new URLSearchParams(window.location.search);
@@ -350,6 +351,34 @@ function addMarker(threat) {
     return marker;
 }
 
+function getTtlProgress(threat) {
+    // Calculate TTL progress (0 = just created, 1 = expired)
+    if (!threat.createdAt || !threat.ttlMinutes) return 0;
+    const elapsed = (Date.now() - threat.createdAt.getTime()) / 1000 / 60; // minutes
+    return Math.min(1, Math.max(0, elapsed / threat.ttlMinutes));
+}
+
+function updateArcTimers() {
+    // Update all arc timer SVGs based on current TTL progress
+    const arcDasharray = 44; // Circle circumference for r=7 (2 * π * 7 ≈ 44)
+    threats.forEach(threat => {
+        if (!threat.isAuto) return;
+        const progress = getTtlProgress(threat);
+        const dashoffset = arcDasharray * progress;
+        
+        // Find the marker element by threat id
+        const el = document.querySelector(`[data-threat-id="${threat.id}"] .ttl-arc-progress`);
+        if (el) {
+            el.setAttribute('stroke-dashoffset', dashoffset);
+        }
+    });
+}
+
+function startArcTimerUpdates() {
+    if (arcTimerInterval) clearInterval(arcTimerInterval);
+    arcTimerInterval = setInterval(updateArcTimers, 10000); // Update every 10 seconds
+}
+
 function getColorFilter(hexColor) {
     // Convert hex color to CSS filter for coloring SVG images
     // Pre-calculated filters for our specific colors
@@ -388,22 +417,54 @@ function createMarkerHtml(threat) {
         // Use custom SVG icon with color filter
         // NOTE: Rotation is handled by Leaflet rotationAngle, not CSS transform
         const colorFilter = getColorFilter(color);
+        
+        // Calculate TTL progress for arc timer (0 = full, 1 = empty)
+        const ttlProgress = threat.isAuto ? getTtlProgress(threat) : 0;
+        const arcDasharray = 44; // Circle circumference for r=7 (2 * π * 7 ≈ 44)
+        const arcDashoffset = arcDasharray * ttlProgress;
+        const angle = threat.angle || 0;
+        
         html = `
-            <div class="${iconClass}" style="
+            <div class="${iconClass}" data-threat-id="${threat.id || ''}" data-angle="${angle}" style="
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 width: 40px;
                 height: 40px;
                 position: relative;
+                overflow: visible;
             ">
                 <img src="${config.svg}" style="
                     width: 32px; 
                     height: 32px; 
                     filter: ${colorFilter} drop-shadow(0 0 8px ${color}) drop-shadow(0 0 16px ${color}); 
-                    position: relative; 
-                    z-index: 1;
                 " />
+                ${threat.isAuto ? `
+                <div class="ttl-wrapper" style="
+                    position: absolute;
+                    width: 40px;
+                    height: 40px;
+                    top: 0;
+                    left: 0;
+                    transform: rotate(${-angle}deg);
+                    pointer-events: none;
+                ">
+                    <svg class="ttl-arc" width="14" height="14" style="
+                        position: absolute; 
+                        bottom: -2px;
+                        right: -2px;
+                        overflow: visible;
+                    ">
+                        <circle class="ttl-arc-bg" cx="7" cy="7" r="5"
+                              fill="rgba(0,0,0,0.4)" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+                        <circle class="ttl-arc-progress" cx="7" cy="7" r="5"
+                              fill="none" stroke="${color}" stroke-width="1.5"
+                              stroke-dasharray="${arcDasharray}" stroke-dashoffset="${arcDashoffset}"
+                              transform="rotate(-90 7 7)"
+                              style="filter: drop-shadow(0 0 2px ${color}); transition: stroke-dashoffset 1s linear;"/>
+                    </svg>
+                </div>
+                ` : ''}
             </div>
         `;
     } else {
@@ -425,9 +486,36 @@ function createMarkerHtml(threat) {
         `;
     }
     
-    // Add count badge if > 1
+    // Add count badge if > 1 (styled with threat color, positioned top-left with counter-rotation)
     if (threat.count > 1) {
-        html += `<div class="count-badge">${threat.count}</div>`;
+        const angle = threat.angle || 0;
+        html += `<div class="count-badge-wrapper" style="
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            top: 0;
+            left: 0;
+            transform: rotate(${-angle}deg);
+            pointer-events: none;
+        ">
+            <div class="count-badge" style="
+                position: absolute;
+                top: -4px;
+                left: -4px;
+                background: rgba(0,0,0,0.7);
+                color: ${config.color};
+                border: 1.5px solid ${config.color};
+                border-radius: 50%;
+                width: 14px;
+                height: 14px;
+                font-size: 9px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 0 4px ${config.color};
+            ">${threat.count}</div>
+        </div>`;
     }
     
     return html;
@@ -1083,6 +1171,7 @@ function initWebSocket() {
     wsConnection.onopen = () => {
         console.log('[WS] Connected');
         updateViewerStatus(true);
+        startArcTimerUpdates();
         if (wsReconnectTimer) {
             clearTimeout(wsReconnectTimer);
             wsReconnectTimer = null;
@@ -1339,7 +1428,9 @@ function addAutoThreat(data) {
         angle: data.angle || 0,
         count: data.count || 1,
         trajectoryLength: data.trajectoryLength || 80, // Use server value, default 80km
-        isAuto: true // Mark as auto-generated
+        isAuto: true, // Mark as auto-generated
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        ttlMinutes: data.ttlMinutes || 15
     };
     
     threats.push(threat);

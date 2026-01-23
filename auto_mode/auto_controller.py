@@ -951,6 +951,11 @@ class AutoController:
     
     def _threat_to_dict(self, threat: AutoThreat) -> dict:
         """Convert AutoThreat to dict for API"""
+        # Get TTL for this threat type
+        ttl_minutes = self.config.threat_ttl_by_type.get(
+            threat.type, 
+            self.config.threat_ttl_minutes
+        )
         return {
             "id": threat.id,
             "type": threat.type,
@@ -959,7 +964,9 @@ class AutoController:
             "angle": threat.angle,
             "count": threat.count,
             "region": threat.region,
-            "trajectoryLength": threat.trajectoryLength
+            "trajectoryLength": threat.trajectoryLength,
+            "createdAt": threat.created_at.isoformat(),
+            "ttlMinutes": ttl_minutes
         }
     
     def get_all_threats(self) -> List[dict]:

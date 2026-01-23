@@ -9,6 +9,13 @@
     --success: #10b981;
 }
 
+/* Custom marker - allow overflow for TTL indicator */
+.custom-marker {
+    overflow: visible !important;
+    background: transparent !important;
+    border: none !important;
+}
+
 body, html {
     margin: 0;
     padding: 0;
@@ -326,23 +333,7 @@ body, html {
     transition: transform 0.3s;
 }
 
-.count-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background-color: white;
-    color: black;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-    z-index: 1000;
-}
+/* Count badge styles now inline in JS for dynamic coloring */
 
 /* Selected Marker Animation */
 .selected-marker .drone-icon,
