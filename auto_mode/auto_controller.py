@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 import random
 
 from .config import AutoModeConfig
-from .alert_monitor import AlertMonitor
 from .telegram_monitor import TelegramMonitor
 from .llm_processor import LLMProcessor, ThreatInfo
 from .geocoder import get_geocoder
@@ -47,7 +46,6 @@ class AutoController:
         self.on_llm_result = on_llm_result
         
         # Components
-        self.alert_monitor = AlertMonitor(on_alert_change=self._on_alert_change)
         self.telegram_monitor: Optional[TelegramMonitor] = None
         self.llm = LLMProcessor(config.openrouter_api_key, config.llm_model)
         
@@ -196,12 +194,6 @@ class AutoController:
         self.is_running = True
         print("[AutoController] Starting AUTO mode...")
         
-        # Start alert monitoring (always runs to know which regions have alerts)
-        alert_task = asyncio.create_task(
-            self.alert_monitor.start(self.config.alert_poll_interval)
-        )
-        self._tasks.append(alert_task)
-        
         # Start Telegram monitoring if credentials available
         if self.config.api_id and self.config.api_hash:
             self.telegram_monitor = TelegramMonitor(
@@ -240,8 +232,6 @@ class AutoController:
         self.is_running = False
         print("[AutoController] Stopping AUTO mode...")
         
-        self.alert_monitor.stop()
-        
         if self.telegram_monitor:
             await self.telegram_monitor.stop()
         
@@ -251,15 +241,6 @@ class AutoController:
         
         if self.on_state_change:
             await self.on_state_change({"status": "stopped"})
-    
-    async def _on_alert_change(self, active: set, added: set, removed: set):
-        """Handle alert status changes"""
-        self.active_alerts = active
-        print(f"[AutoController] Active alerts: {active}")
-        
-        # When alert is removed from a region, optionally clear threats there
-        for region in removed:
-            await self._clear_region_threats(region)
     
     async def _on_telegram_message(self, msg_data: dict):
         """Handle new Telegram message - add to buffer for batch processing"""

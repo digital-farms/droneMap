@@ -44,9 +44,6 @@ class AutoModeConfig:
         "nuclear": 5
     })
     
-    # Polling intervals
-    alert_poll_interval: int = 30  # seconds
-    
     # Keywords for quick filtering (before LLM)
     threat_keywords: List[str] = field(default_factory=lambda: [
         # БПЛА / Дроны
