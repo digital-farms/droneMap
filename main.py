@@ -199,11 +199,14 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         # Send current state on connect
+        auto_threats = auto_controller.get_all_threats() if auto_controller else []
+        print(f"[WS] Sending init with {len(auto_threats)} auto_threats")
         await websocket.send_text(json.dumps({
             "type": "init",
             "data": {
                 "auto_mode": auto_mode_enabled,
                 "threats": [t.dict() for t in current_state.threats],
+                "auto_threats": auto_threats,
                 "status": auto_controller.get_status() if auto_controller else None,
                 "feed_history": auto_controller.get_feed_history() if auto_controller else []
             }

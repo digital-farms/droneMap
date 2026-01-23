@@ -354,7 +354,9 @@ function addMarker(threat) {
 function getTtlProgress(threat) {
     // Calculate TTL progress (0 = just created, 1 = expired)
     if (!threat.createdAt || !threat.ttlMinutes) return 0;
-    const elapsed = (Date.now() - threat.createdAt.getTime()) / 1000 / 60; // minutes
+    // Handle both Date objects and ISO strings
+    const createdTime = threat.createdAt instanceof Date ? threat.createdAt.getTime() : new Date(threat.createdAt).getTime();
+    const elapsed = (Date.now() - createdTime) / 1000 / 60; // minutes
     return Math.min(1, Math.max(0, elapsed / threat.ttlMinutes));
 }
 
@@ -1237,6 +1239,14 @@ function handleWebSocketMessage(msg) {
                     lng: alert.lng
                 });
                 console.log('[Init] Loaded active flight alert:', alert.aircraft);
+            }
+            // Load existing AUTO mode threats
+            if (msg.data.auto_threats && Array.isArray(msg.data.auto_threats)) {
+                console.log('[Init] Loading auto threats:', msg.data.auto_threats.length, msg.data.auto_threats);
+                msg.data.auto_threats.forEach(threat => {
+                    console.log('[Init] Adding threat:', threat.id, threat.type, threat.lat, threat.lng);
+                    addAutoThreat(threat);
+                });
             }
             // Load feed history
             if (msg.data.feed_history && Array.isArray(msg.data.feed_history)) {
