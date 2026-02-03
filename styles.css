@@ -1084,7 +1084,7 @@ body.view-mode .threat-feed {
 
 #info-btn {
     position: absolute;
-    top: 70px;
+    top: 110px;
     right: 20px;
     z-index: 1000;
     width: 36px;
@@ -1145,7 +1145,8 @@ body.view-mode .threat-feed {
     backdrop-filter: blur(8px);
     z-index: 2000;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    overflow-y: auto;
     animation: fadeIn 0.2s ease;
 }
 
@@ -1162,10 +1163,12 @@ body.view-mode .threat-feed {
     background: linear-gradient(145deg, rgba(26, 29, 45, 0.98), rgba(15, 17, 26, 0.98));
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 16px;
-    padding: 24px;
-    max-width: 400px;
-    width: 90%;
-    max-height: 85vh;
+    padding: 20px;
+    padding-top: 48px;
+    max-width: 360px;
+    width: calc(100% - 40px);
+    max-height: calc(100vh - 120px);
+    margin: 60px 20px 20px 20px;
     overflow-y: auto;
     position: relative;
     box-shadow: 
@@ -1277,12 +1280,13 @@ body.view-mode .threat-feed {
 .info-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 8px 10px;
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.2s ease;
+    min-width: 0;
 }
 
 .info-item:hover {
@@ -1303,12 +1307,14 @@ body.view-mode .threat-feed {
 }
 
 .info-item .info-ttl {
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'JetBrains Mono', monospace;
-    padding: 2px 6px;
+    padding: 2px 5px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Threat type colors - matching actual marker colors from script.js */
