@@ -1103,6 +1103,18 @@ async function exportMap() {
 }
 
 // ==========================================
+// Info Modal
+// ==========================================
+
+function openInfo() {
+    document.getElementById('info-modal').classList.add('active');
+}
+
+function closeInfo() {
+    document.getElementById('info-modal').classList.remove('active');
+}
+
+// ==========================================
 // Help Modal
 // ==========================================
 
@@ -1114,11 +1126,16 @@ function closeHelp() {
     document.getElementById('help-modal').style.display = 'none';
 }
 
-// Close modal on outside click
+// Close modals on outside click
 document.addEventListener('click', (e) => {
-    const modal = document.getElementById('help-modal');
-    if (e.target === modal) {
+    const helpModal = document.getElementById('help-modal');
+    const infoModal = document.getElementById('info-modal');
+    
+    if (e.target === helpModal) {
         closeHelp();
+    }
+    if (e.target === infoModal) {
+        closeInfo();
     }
 });
 
@@ -1682,6 +1699,8 @@ window.deleteThreat = deleteThreat;
 window.clearThreats = clearThreats;
 window.clearAll = clearAll;
 window.exportMap = exportMap;
+window.openInfo = openInfo;
+window.closeInfo = closeInfo;
 window.openHelp = openHelp;
 window.closeHelp = closeHelp;
 window.toggleAutoMode = toggleAutoMode;

@@ -1079,3 +1079,276 @@ body.view-mode .threat-feed {
     color: #22c55e;
     font-weight: 700;
 }
+
+/* ==================== INFO BUTTON & MODAL ==================== */
+
+#info-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(168, 85, 247, 0.6);
+    background: rgba(15, 17, 26, 0.9);
+    color: #a855f7;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4), 0 0 24px rgba(168, 85, 247, 0.2);
+}
+
+#info-btn:hover {
+    background: rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.8);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.6), 0 0 40px rgba(168, 85, 247, 0.3);
+    color: #c084fc;
+}
+
+#info-btn:active {
+    transform: scale(0.95);
+}
+
+#help-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(15, 17, 26, 0.9);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#help-btn:hover {
+    background: rgba(45, 55, 72, 0.9);
+    color: white;
+}
+
+/* Info Modal */
+.info-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.info-modal.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.info-modal-content {
+    background: linear-gradient(145deg, rgba(26, 29, 45, 0.98), rgba(15, 17, 26, 0.98));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 
+        0 0 40px rgba(59, 130, 246, 0.2),
+        0 0 80px rgba(59, 130, 246, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.info-close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+}
+
+.info-title {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}
+
+.info-section {
+    margin-bottom: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-section h3 i {
+    color: #3b82f6;
+    font-size: 12px;
+}
+
+.info-section p {
+    margin: 8px 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+.info-section.disclaimer {
+    border-color: rgba(245, 158, 11, 0.2);
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.info-section.disclaimer h3 i {
+    color: #f59e0b;
+}
+
+.info-warning {
+    color: #f59e0b !important;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: 8px;
+    border-left: 3px solid #f59e0b;
+}
+
+/* Info Grid for threat types */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.info-item:hover {
+    transform: scale(1.02);
+}
+
+.info-item .info-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.info-item .info-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    flex: 1;
+}
+
+.info-item .info-ttl {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Threat type colors - matching actual marker colors from script.js */
+/* drone: #f59e0b (orange/amber) */
+.info-item.drone {
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+.info-item.drone .info-icon {
+    filter: brightness(0) saturate(100%) invert(67%) sepia(65%) saturate(588%) hue-rotate(360deg) drop-shadow(0 0 6px #f59e0b);
+}
+
+/* missile: #ef4444 (red) */
+.info-item.missile {
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+.info-item.missile .info-icon {
+    filter: brightness(0) saturate(100%) invert(36%) sepia(93%) saturate(2053%) hue-rotate(337deg) drop-shadow(0 0 6px #ef4444);
+}
+
+/* ballistic: #a855f7 (purple) */
+.info-item.ballistic {
+    border-color: rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+}
+.info-item.ballistic .info-icon {
+    filter: brightness(0) saturate(100%) invert(44%) sepia(94%) saturate(2726%) hue-rotate(243deg) drop-shadow(0 0 6px #a855f7);
+}
+
+/* hypersonic: #06b6d4 (cyan) */
+.info-item.hypersonic {
+    border-color: rgba(6, 182, 212, 0.4);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+.info-item.hypersonic .info-icon {
+    filter: brightness(0) saturate(100%) invert(63%) sepia(96%) saturate(1352%) hue-rotate(152deg) brightness(95%) contrast(94%) drop-shadow(0 0 6px #06b6d4);
+}
+
+/* Hide help button in view mode, but keep info button visible */
+.view-mode #help-btn {
+    display: none;
+}

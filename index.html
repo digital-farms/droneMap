@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=26">
     <!-- Immediately apply view-mode class to prevent flash of admin UI -->
     <script>
         if (new URLSearchParams(window.location.search).get('view') === 'true') {
@@ -31,8 +31,62 @@
             </div>
         </div>
         
+        <!-- Info Button -->
+        <button id="info-btn" onclick="openInfo()">
+            <i class="fa-solid fa-info"></i>
+        </button>
+
+        <!-- Info Modal -->
+        <div id="info-modal" class="info-modal">
+            <div class="info-modal-content">
+                <button class="info-close-btn" onclick="closeInfo()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                
+                <h2 class="info-title">Інформація</h2>
+                
+                <div class="info-section">
+                    <h3><i class="fa-solid fa-crosshairs"></i> Типи цілей</h3>
+                    <div class="info-grid">
+                        <div class="info-item drone">
+                            <img class="info-icon" src="icons/drone.svg" alt="БПЛА">
+                            <span class="info-label">БПЛА</span>
+                            <span class="info-ttl">15 хв</span>
+                        </div>
+                        <div class="info-item missile">
+                            <img class="info-icon" src="icons/missile.svg" alt="КР">
+                            <span class="info-label">КР</span>
+                            <span class="info-ttl">7 хв</span>
+                        </div>
+                        <div class="info-item ballistic">
+                            <img class="info-icon" src="icons/ballistic.svg" alt="Балістика">
+                            <span class="info-label">Балістика</span>
+                            <span class="info-ttl">5 хв</span>
+                        </div>
+                        <div class="info-item hypersonic">
+                            <img class="info-icon" src="icons/hypersonic.svg" alt="Гіперзвук">
+                            <span class="info-label">Гіперзвук</span>
+                            <span class="info-ttl">7 хв</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3><i class="fa-solid fa-clock"></i> Час життя (TTL)</h3>
+                    <p>Кожна ціль автоматично зникає з карти після закінчення свого TTL. Дуга навколо маркера показує залишок часу.</p>
+                </div>
+                
+                <div class="info-section disclaimer">
+                    <h3><i class="fa-solid fa-shield-halved"></i> Дисклеймер</h3>
+                    <p>Дані отримані з <strong>відкритих джерел</strong> (публічні Telegram-канали).</p>
+                    <p>Цей проект <strong>не є військовою розробкою</strong> та створений виключно в інформаційних цілях.</p>
+                    <p class="info-warning">Інформація може бути неточною або застарілою. Використовуйте офіційні джерела!</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Help Button -->
-        <button id="help-btn" onclick="openHelp()" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: #2d3748; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; width: 40px; height: 40px;">
+        <button id="help-btn" onclick="openHelp()">
             <i class="fa-solid fa-question"></i>
         </button>
 
@@ -161,6 +215,6 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <!-- TopoJSON Client -->
     <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-    <script src="script.js?v=47"></script>
+    <script src="script.js?v=48"></script>
 </body>
 </html>
