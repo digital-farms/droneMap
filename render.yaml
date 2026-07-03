@@ -2,7 +2,7 @@ services:
   - type: web
     name: drone-monitor
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && playwright install chromium
     startCommand: python run.py
     envVars:
       - key: TELEGRAM_API_ID
@@ -11,7 +11,11 @@ services:
         sync: false
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
       - key: OPENROUTER_API_KEY
+        sync: false
+      - key: SCREENSHOT_BASE_URL
         sync: false
       - key: AUTO_START
         value: "true"

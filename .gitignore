@@ -1,4 +1,10 @@
 venv/
+.venv/
 __pycache__/
 screenshots/
+.playwright-tmp/
 .env
+*.log
+*.session
+*.session-journal
+bot_session.session*

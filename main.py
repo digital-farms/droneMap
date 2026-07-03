@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,20 +93,30 @@ async def update_state(state: MapState):
     return {"status": "updated", "count": len(state.threats)}
 
 @app.post("/api/screenshot")
-async def take_screenshot():
+async def take_screenshot(request: Request):
     """
     Launches a headless browser, opens the map in 'view mode', and takes a screenshot.
     """
     print("Screenshot request received...")
     filename = ""
     try:
+        playwright_tmp = os.getenv("PLAYWRIGHT_TMP_DIR", os.path.abspath(".playwright-tmp"))
+        os.makedirs(playwright_tmp, exist_ok=True)
+        os.environ["TMPDIR"] = playwright_tmp
+        os.environ["TEMP"] = playwright_tmp
+        os.environ["TMP"] = playwright_tmp
+
         async with async_playwright() as p:
             print("Launching browser...")
             browser = await p.chromium.launch()
             page = await browser.new_page(viewport={"width": 1280, "height": 720})
             
-            # URL of the local server (we assume it's running on port 8000)
-            url = "http://localhost:8000/?view=true"
+            screenshot_base_url = os.getenv("SCREENSHOT_BASE_URL")
+            if screenshot_base_url:
+                url = f"{screenshot_base_url.rstrip('/')}/?view=true"
+            else:
+                port = os.getenv("PORT", str(request.url.port or 8080))
+                url = f"http://127.0.0.1:{port}/?view=true"
             print(f"Navigating to {url}...")
             
             await page.goto(url)
@@ -280,9 +290,13 @@ async def viewer_page():
     """Serve read-only viewer page"""
     return FileResponse("viewer.html")
 
-# Auto-start AUTO mode on startup (always enabled by default)
+# Auto-start AUTO mode on startup when enabled for production
 @app.on_event("startup")
 async def startup_event():
+    if os.getenv("AUTO_START", "false").lower() != "true":
+        print("[Startup] AUTO_START is disabled; AUTO mode can be started via API")
+        return
+
     print("[Startup] Starting AUTO mode...")
     # Small delay to let server fully start
     await asyncio.sleep(2)
